@@ -39,6 +39,10 @@ app:
     email: ${ADMIN_EMAIL:admin@erp.com}
     senha: ${ADMIN_SENHA:admin123}
   seed-demo: ${SEED_DEMO:true}
+  afiliados:
+    awin:
+      # Seu ID de publisher na Awin (Conta > Detalhes). Com ele, links da Awin são montados a partir do endereço do produto.
+      publisher-id: ${AWIN_PUBLISHER_ID:}
   estoque:
     permitir-negativo: ${ESTOQUE_PERMITIR_NEGATIVO:false}
   nfe:

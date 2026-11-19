@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Foto, Seta, Trilho, emOferta, reduzMovimento, urlDe, useRevela, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
+import { Card, Foto, MarcaLoja, Seta, Trilho, ehAfiliado, emOferta, reduzMovimento, urlDe, useRevela, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
 
 /** Frases de campanha por categoria (as que não estiverem aqui usam o próprio nome). */
 const FRASES: Record<string, string> = {
@@ -40,7 +40,7 @@ export function Home({ dados, ir, onAbrir, onAdicionar }: Props) {
 
       <Letreiro itens={categorias.map((c) => c.nome)} />
 
-      <Passos />
+      <Passos comparador={produtos.some(ehAfiliado)} />
 
       <Trilho titulo={maisVendidos.length >= 4 ? 'Mais vendidos' : 'Destaques'}
         sub={maisVendidos.length >= 4 ? 'O que mais saiu nos últimos 90 dias' : 'Uma seleção da vitrine'}
@@ -49,6 +49,8 @@ export function Home({ dados, ir, onAbrir, onAdicionar }: Props) {
       </Trilho>
 
       <Categorias dados={dados} capa={(id) => doCat(id)[0]} ir={ir} />
+
+      {(dados.parceiros?.length ?? 0) > 0 && <Parceiros dados={dados} ir={ir} />}
 
       {ofertas.length > 0 && <BannerOfertas ofertas={ofertas} ir={ir} />}
 
@@ -160,9 +162,13 @@ function Letreiro({ itens }: { itens: string[] }) {
 }
 
 /* ============================== como funciona ============================== */
-function Passos() {
+function Passos({ comparador }: { comparador: boolean }) {
   const [ref, visto] = useRevela<HTMLElement>();
-  const itens = [
+  const itens = comparador ? [
+    ['Compare as lojas', 'Mostramos o preço do mesmo produto em várias lojas parceiras, com frete e avaliações.'],
+    ['Veja o histórico', 'O gráfico mostra se o preço de hoje está bom ou se vale esperar.'],
+    ['Compre direto na loja', 'Você finaliza no site da loja escolhida, sem custo extra.'],
+  ] : [
     ['Monte sua sacola', 'Escolha os produtos e as quantidades com calma. A sacola fica salva neste aparelho.'],
     ['Envie o pedido', 'Sem cadastro e sem pagar agora: só nome e telefone.'],
     ['A loja confirma', 'Entramos em contato para combinar pagamento por Pix, cartão ou dinheiro.'],
@@ -196,6 +202,31 @@ function Categorias({ dados, capa, ir }: { dados: Catalogo; capa: (id: number) =
         </a>
       ))}
     </Trilho>
+  );
+}
+
+/* ============================== lojas parceiras ============================== */
+function Parceiros({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
+  const [ref, visto] = useRevela<HTMLElement>();
+  const ps = dados.parceiros ?? [];
+  return (
+    <section className={`s-parceiros-sec ${visto ? 'in' : ''}`} ref={ref}>
+      <div className="s-sec-head">
+        <div>
+          <h2 className="s-sec-title">Lojas parceiras</h2>
+          <p className="s-sec-sub">Comparamos os preços e você compra direto na loja</p>
+        </div>
+      </div>
+      <div className="s-parceiros">
+        {ps.map((x, n) => (
+          <a key={x.id} href={urlDe({ l: x.id })} className="s-parceiro" style={{ ['--i' as string]: n }}
+            onClick={(e) => { e.preventDefault(); ir({ l: x.id }); }}>
+            <MarcaLoja nome={x.nome} cor={x.cor} size={44} />
+            <div><strong>{x.nome}</strong><span className="n">{x.produtos} {x.produtos === 1 ? 'produto' : 'produtos'}</span></div>
+          </a>
+        ))}
+      </div>
+    </section>
   );
 }
 

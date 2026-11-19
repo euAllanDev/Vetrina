@@ -291,6 +291,14 @@
 .s-card-name { font-weight: 500; font-size: 15.5px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .s-card-cat { color: var(--s-ink-2); font-size: 15px; }
 .s-card .s-preco { margin-top: 8px; }
+.s-apartir { margin-top: 8px; font-size: 13px; color: var(--s-ink-2); }
+.s-apartir + .s-preco { margin-top: 0; }
+.s-card-lojas { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--s-ink-2); }
+.s-card-lojas .marcas { display: inline-flex; }
+.s-card-lojas .marcas .s-marca { box-shadow: 0 0 0 2px #fff; }
+.s-card-lojas .marcas .s-marca + .s-marca { margin-left: -5px; }
+.s-marca { display: inline-grid; place-items: center; flex: none; border-radius: 6px; font-family: var(--s-sans); font-weight: 700; line-height: 1; }
+.s-selo.frete { background: var(--s-ok); color: #fff; }
 
 /* ---------- Preço ---------- */
 .s-preco { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; font-weight: 500; font-size: 15.5px; }
@@ -412,6 +420,86 @@
 .s-qty span { min-width: 24px; text-align: center; font-weight: 500; }
 .s-qty.sm { height: 34px; margin-top: 10px; }
 .s-qty.sm button { width: 34px; font-size: 16px; }
+
+/* ---------- Comparador de ofertas ---------- */
+.s-pdp-buy.afil { flex-direction: column; }
+.s-pdp-buy.afil .s-btn { flex: none; width: 100%; }
+.s-apartir.lg { margin: 0 0 2px; font-size: 14px; }
+.s-btn.ghost { background: #fff; color: var(--s-ink); box-shadow: inset 0 0 0 1.5px var(--s-line); }
+.s-btn.ghost:hover:not(:disabled) { background: var(--s-soft); box-shadow: inset 0 0 0 1.5px var(--s-ink); }
+.s-btn .s-marca { box-shadow: 0 0 0 1.5px rgba(255,255,255,.9); }
+
+.s-ofertas { container-type: inline-size; margin-top: 30px; scroll-margin-top: calc(var(--s-head-off, 64px) + 16px); }
+.s-ofertas-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.s-ofertas-head h2 { font: 400 28px/1 var(--s-display); text-transform: uppercase; }
+.s-ofertas-eco { font-size: 13px; font-weight: 600; color: var(--s-ok); background: #e7f5ee; padding: 5px 10px; border-radius: 999px; }
+.s-ofertas-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.s-oferta {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 14px; align-items: center;
+  padding: 16px; border: 1px solid var(--s-line); border-radius: 14px; background: #fff;
+  animation: s-fade-up 600ms var(--s-ease) both; animation-delay: calc(var(--i) * 70ms + 150ms);
+  transition: border-color 200ms, box-shadow 300ms var(--s-ease), transform 300ms var(--s-ease);
+}
+.s-oferta:hover { border-color: #cfcfcf; box-shadow: 0 10px 30px -18px rgba(0,0,0,.35); transform: translateY(-1px); }
+.s-oferta.top { border: 1.5px solid var(--s-ink); padding-top: 22px; }
+.s-oferta.off { opacity: .55; }
+.s-oferta-tag { position: absolute; top: -10px; left: 14px; background: var(--s-ink); color: #fff; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; letter-spacing: .02em; }
+.s-oferta-loja { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.s-oferta-loja > div { min-width: 0; }
+.s-oferta-loja strong { display: block; font-weight: 600; font-size: 15px; }
+.s-oferta-nota { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; font-size: 13px; color: var(--s-ink); margin-top: 2px; }
+.s-oferta-nota small { color: var(--s-ink-2); font-size: 12px; }
+.s-estrelas { position: relative; display: inline-block; font-size: 12px; letter-spacing: 1px; line-height: 1; }
+.s-estrelas .base { color: #d9d9d9; }
+.s-estrelas .cheia { position: absolute; left: 0; top: 0; overflow: hidden; white-space: nowrap; color: #f5a623; }
+.s-oferta-preco { display: grid; gap: 1px; }
+.s-oferta-preco .por { font-size: 19px; font-weight: 600; }
+.s-oferta.top .s-oferta-preco .por { color: var(--s-ink); }
+.s-oferta-preco .de { color: var(--s-ink-2); font-size: 13px; }
+.s-oferta-preco .frete { font-size: 13px; color: var(--s-ink-2); }
+.s-oferta-preco .frete.ok { color: var(--s-ok); font-weight: 600; }
+.s-oferta-preco .frete.muted { color: var(--s-ink-3); }
+.s-oferta-preco .parc { font-size: 12.5px; color: var(--s-ink-2); }
+.s-oferta-btn { height: 44px; padding: 0 18px; font-size: 14px; }
+.s-oferta-btn svg { transition: transform 300ms var(--s-ease); }
+.s-oferta-btn:hover svg { transform: translate(2px, -2px); }
+.s-oferta-indisp { font-size: 13px; color: var(--s-ink-2); }
+.s-ofertas-nota { margin-top: 12px; font-size: 12.5px; color: var(--s-ink-2); }
+
+@container (max-width: 520px) {
+  .s-oferta { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+  .s-oferta-btn { grid-column: 1 / -1; width: 100%; }
+  .s-oferta-preco { text-align: right; justify-items: end; max-width: 46cqi; }
+}
+
+/* histórico de preço */
+.s-hist { margin: clamp(40px, 6vw, 72px) var(--s-pad) 0; padding: clamp(18px, 3vw, 32px); border: 1px solid var(--s-line); border-radius: 20px; animation: s-fade-up 700ms var(--s-ease) both; }
+.s-hist-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.s-hist-head h2 { font: 400 clamp(26px, 2.6vw, 34px)/1 var(--s-display); text-transform: uppercase; }
+.s-hist-head p { color: var(--s-ink-2); font-size: 14px; margin-top: 6px; }
+.s-hist-dias { display: inline-flex; background: var(--s-soft); border-radius: 999px; padding: 4px; }
+.s-hist-dias button { height: 32px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--s-ink-2); transition: background 200ms, color 200ms; }
+.s-hist-dias button[aria-pressed="true"] { background: #fff; color: var(--s-ink); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.s-hist-selo { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; background: #e7f5ee; color: var(--s-ok); font-weight: 600; font-size: 13.5px; padding: 7px 12px; border-radius: 999px; }
+.s-hist-num { display: flex; gap: clamp(18px, 4vw, 48px); margin: 20px 0 10px; }
+.s-hist-num span { display: block; font-size: 12.5px; color: var(--s-ink-2); }
+.s-hist-num strong { font-size: 20px; font-weight: 600; }
+.s-hist-num strong.ok { color: var(--s-ok); }
+.s-hist-svg { display: block; width: 100%; height: 180px; touch-action: pan-y; cursor: crosshair; }
+.s-hist-linha { stroke-dasharray: 2400; stroke-dashoffset: 2400; animation: s-desenha 1400ms var(--s-ease) 200ms forwards; }
+@keyframes s-desenha { to { stroke-dashoffset: 0; } }
+.s-hist-eixo { display: flex; justify-content: space-between; font-size: 12px; color: var(--s-ink-3); margin-top: 6px; }
+.s-hist-aviso { margin-top: 10px; font-size: 13px; color: var(--s-ink-2); }
+
+/* lojas parceiras (home) */
+.s-parceiros { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; padding: 0 var(--s-pad); }
+.s-parceiro { display: flex; align-items: center; gap: 14px; padding: 18px; border: 1px solid var(--s-line); border-radius: 16px; transition: border-color 200ms, transform 300ms var(--s-ease), box-shadow 300ms var(--s-ease); opacity: 0; transform: translateY(16px); }
+.s-trilho.in .s-parceiro, .s-parceiros-sec.in .s-parceiro { animation: s-fade-up 700ms var(--s-ease) forwards; animation-delay: calc(var(--i) * 70ms); }
+.s-parceiro:hover { border-color: var(--s-ink); box-shadow: 0 12px 30px -20px rgba(0,0,0,.4); }
+.s-parceiro strong { display: block; font-weight: 600; }
+.s-parceiro span.n { font-size: 13px; color: var(--s-ink-2); }
+.s-parceiros-sec { padding-top: clamp(48px, 7vw, 88px); }
+.s-aviso-afiliado { margin-top: 18px; font-size: 12.5px; color: rgba(255,255,255,.5); max-width: 70ch; }
 
 /* barra fixa de compra (só celular) */
 .s-buybar { display: none; }
@@ -610,6 +698,7 @@
   .s-pdp-sticky { position: static; }
   .s-pdp-buy { flex-direction: column; }
   .s-pdp-buy .s-btn { flex: none; width: 100%; }
+  .s-hist { margin-left: 8px; margin-right: 8px; }
   .s-qty { align-self: flex-start; }
   .s-chips.cats { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 18px calc(-1 * var(--s-pad)) 0; padding: 0 var(--s-pad); }
   .s-chips.cats::-webkit-scrollbar { display: none; }

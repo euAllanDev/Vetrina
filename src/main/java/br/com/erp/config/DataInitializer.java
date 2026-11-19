@@ -1,5 +1,8 @@
 package br.com.erp.config;
 
+import br.com.erp.afiliado.Parceiro;
+import br.com.erp.afiliado.ParceiroRepository;
+import br.com.erp.afiliado.RedeAfiliado;
 import br.com.erp.cliente.ClienteDtos.ClienteRequest;
 import br.com.erp.cliente.ClienteRepository;
 import br.com.erp.cliente.ClienteService;
@@ -42,6 +45,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ClienteService clienteService;
     private final FornecedorService fornecedorService;
     private final PasswordEncoder passwordEncoder;
+    private final ParceiroRepository parceiroRepository;
 
     @Value("${app.admin.email}")
     private String adminEmail;
@@ -82,9 +86,25 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Empresa de demonstração criada; ajuste os dados em PUT /api/empresa");
         }
 
+        if (parceiroRepository.count() == 0) {
+            parceiro("Mercado Livre", RedeAfiliado.MERCADO_LIVRE, "#FFE600", "https://www.mercadolivre.com.br");
+            parceiro("AliExpress", RedeAfiliado.ALIEXPRESS, "#E62E04", "https://pt.aliexpress.com");
+            parceiro("Shopee", RedeAfiliado.SHOPEE, "#EE4D2D", "https://shopee.com.br");
+            parceiro("KaBuM!", RedeAfiliado.AWIN, "#0060B1", "https://www.kabum.com.br");
+            log.info("Lojas parceiras criadas: Mercado Livre, AliExpress, Shopee e KaBuM! (Awin)");
+        }
         if (seedDemo && produtoRepository.count() == 0 && clienteRepository.count() == 0) {
             criarDadosDemo();
         }
+    }
+
+    private void parceiro(String nome, RedeAfiliado rede, String cor, String site) {
+        Parceiro p = new Parceiro();
+        p.setNome(nome);
+        p.setRede(rede);
+        p.setCor(cor);
+        p.setSite(site);
+        parceiroRepository.save(p);
     }
 
     private void criarDadosDemo() {

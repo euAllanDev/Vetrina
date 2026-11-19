@@ -5,7 +5,7 @@ import { Home } from './Home';
 import { Lista } from './Lista';
 import { Pdp } from './Pdp';
 import {
-  Foto, Preco, Seta, emOferta, inicial, lerRota, limiteDe, reduzMovimento, transicao, urlDe,
+  Foto, Preco, Seta, ehAfiliado, emOferta, inicial, lerRota, limiteDe, reduzMovimento, transicao, urlDe,
   type Catalogo, type Loja, type Produto, type Rota,
 } from './shared';
 import './store.css';
@@ -61,7 +61,11 @@ function voarParaSacola(origem: Element | null, destino: Element | null, imagem:
   return anim.finished.then(() => el.remove(), () => el.remove());
 }
 
-const AVISOS = (loja: Loja | undefined) => [
+const AVISOS = (loja: Loja | undefined, comparador = false) => comparador ? [
+  'Compare preços entre lojas parceiras',
+  'Você compra direto na loja, sem custo extra',
+  'Histórico de preço em cada produto',
+] : [
   'Peça sem pagar agora · confirmamos por telefone',
   'Pague com Pix, cartão ou dinheiro',
   loja?.cidade ? `Atendimento a partir de ${loja.cidade}${loja.uf ? `/${loja.uf}` : ''}` : 'Sua sacola fica salva neste aparelho',
@@ -139,7 +143,8 @@ export function Store() {
   useEffect(() => {
     const nome = dados?.loja.nome ?? 'Loja';
     const cat = dados?.categorias.find((c) => c.id === rota.c);
-    document.title = produto ? `${produto.nome} — ${nome}` : cat ? `${cat.nome} — ${nome}` : rota.q ? `Busca: ${rota.q} — ${nome}` : nome;
+    const lj = dados?.parceiros?.find((x) => x.id === rota.l);
+    document.title = produto ? `${produto.nome} — ${nome}` : lj ? `${lj.nome} — ${nome}` : cat ? `${cat.nome} — ${nome}` : rota.q ? `Busca: ${rota.q} — ${nome}` : nome;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#ffffff');
   }, [dados, rota, produto]);
 
@@ -156,6 +161,7 @@ export function Store() {
   const qtdSacola = Object.values(sacola).reduce((s, q) => s + q, 0);
 
   const adicionar = async (p: Produto, origem: Element | null, quantidade = 1) => {
+    if (ehAfiliado(p)) { abrir(p, null); return; }
     const atual = sacola[p.id] ?? 0;
     if (atual + quantidade > limiteDe(p)) {
       setToast({ id: Date.now(), texto: `Só temos ${limiteDe(p)} ${limiteDe(p) === 1 ? 'unidade' : 'unidades'} de ${p.nome}.` });
@@ -172,13 +178,13 @@ export function Store() {
     : rota.p ? (produto
       ? <Pdp key={produto.id} p={produto} dados={dados} naSacola={sacola[produto.id] ?? 0} ir={ir} onAbrir={abrir} onAdicionar={adicionar} />
       : <div className="s-vazio"><span className="s-display sm">Produto indisponível</span><p>Este produto não está mais na vitrine.</p><button className="s-btn" onClick={() => ir({})}>Voltar à loja</button></div>)
-    : (rota.c || rota.q || rota.v) ? <Lista dados={dados} rota={rota} ir={ir} onAbrir={abrir} onAdicionar={adicionar} />
+    : (rota.c || rota.q || rota.v || rota.l) ? <Lista dados={dados} rota={rota} ir={ir} onAbrir={abrir} onAdicionar={adicionar} />
     : <Home dados={dados} ir={ir} onAbrir={abrir} onAdicionar={adicionar} />;
 
   return (
     <div className="s-root">
       <a className="s-skip" href="#s-main">Pular para o conteúdo</a>
-      <Avisos itens={AVISOS(dados?.loja)} />
+      <Avisos itens={AVISOS(dados?.loja, !!dados?.produtos.some(ehAfiliado))} />
       <Cabecalho dados={dados} rota={rota} ir={ir} abrir={abrir} qtd={qtdSacola} bump={bump} bagRef={bagRef}
         onSacola={() => { setToast(null); setSacolaAberta(true); }} onMenu={() => setMenuAberto(true)} />
 
@@ -663,6 +669,7 @@ function SacolaPainel({ produtos, sacola, mudar, remover, limpar, onFechar }:
 /* ============================== rodapé ============================== */
 function Rodape({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
   const { loja, categorias } = dados;
+  const comparador = dados.produtos.some(ehAfiliado);
   const fone = loja.telefone ? onlyDigits(loja.telefone) : '';
   const foneFmt = fone.length === 11 ? `(${fone.slice(0, 2)}) ${fone.slice(2, 7)}-${fone.slice(7)}` : fone.length === 10 ? `(${fone.slice(0, 2)}) ${fone.slice(2, 6)}-${fone.slice(6)}` : loja.telefone;
   return (
@@ -670,7 +677,7 @@ function Rodape({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
       <div className="s-foot-top">
         <div className="s-foot-brand">
           <span className="s-display">{loja.nome}</span>
-          <p>Escolha online, receba a confirmação pelo telefone e pague como preferir.</p>
+          <p>{comparador ? 'Compare preços entre lojas parceiras e compre onde sair mais barato.' : 'Escolha online, receba a confirmação pelo telefone e pague como preferir.'}</p>
         </div>
         <div>
           <h4>Comprar</h4>
@@ -679,10 +686,20 @@ function Rodape({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
         </div>
         <div>
           <h4>Como funciona</h4>
-          <p>1. Monte sua sacola</p>
-          <p>2. Envie o pedido sem pagar agora</p>
-          <p>3. A loja confirma com você</p>
-          <p>Pix, cartão ou dinheiro</p>
+          {comparador ? (
+            <>
+              <p>1. Compare preços entre as lojas</p>
+              <p>2. Escolha a melhor oferta</p>
+              <p>3. Compre direto no site da loja</p>
+            </>
+          ) : (
+            <>
+              <p>1. Monte sua sacola</p>
+              <p>2. Envie o pedido sem pagar agora</p>
+              <p>3. A loja confirma com você</p>
+              <p>Pix, cartão ou dinheiro</p>
+            </>
+          )}
         </div>
         <div>
           <h4>Atendimento</h4>
@@ -691,6 +708,9 @@ function Rodape({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
           {loja.cidade && <p>{loja.cidade}{loja.uf ? `/${loja.uf}` : ''}</p>}
         </div>
       </div>
+      {(dados.parceiros?.length ?? 0) > 0 && (
+        <p className="s-aviso-afiliado">Alguns produtos são vendidos por lojas parceiras. Quando você compra por um link "Ver na loja", podemos receber uma comissão, sem custo extra para você. Preços e disponibilidade são definidos pelas lojas e podem mudar.</p>
+      )}
       <div className="s-foot-bottom">
         <span>© {new Date().getFullYear()} {loja.razaoSocial ?? loja.nome}</span>
         <a href="/">Área da equipe</a>

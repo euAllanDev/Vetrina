@@ -19,6 +19,7 @@ export const NAV: { group: string; items: NavItem[] }[] = [
   ] },
   { group: 'Estoque', items: [
     { path: '/produtos', label: 'Produtos', icon: 'package', roles: ['GERENTE', 'VENDEDOR', 'ESTOQUISTA', 'FINANCEIRO'] },
+    { path: '/afiliados', label: 'Afiliados', icon: 'link', roles: ['GERENTE'] },
     { path: '/estoque', label: 'Movimentações', icon: 'boxes', roles: ['GERENTE', 'ESTOQUISTA'] },
     { path: '/compras', label: 'Compras', icon: 'truck', roles: ['GERENTE', 'ESTOQUISTA'] },
   ] },

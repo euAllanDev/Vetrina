@@ -47,6 +47,8 @@ public class SecurityConfig {
                         .requestMatchers(ROTAS_PUBLICAS).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/produtos/*/imagem").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/catalogo").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/catalogo/produtos/*/historico").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/ir/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/catalogo/pedidos").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

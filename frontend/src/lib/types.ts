@@ -116,3 +116,18 @@ export interface CurvaAbcItem {
 }
 export interface FluxoCaixa { inicio: string; fim: string; recebido: number; pago: number; saldoRealizado: number; aReceber: number; aPagar: number; saldoPrevisto: number }
 export interface ResumoEstoque { produtosAtivos: number; produtosAbaixoDoMinimo: number; valorTotalCusto: number }
+
+/* ---------- afiliados ---------- */
+export type RedeAfiliado = 'MERCADO_LIVRE' | 'ALIEXPRESS' | 'SHOPEE' | 'AWIN' | 'OUTRA';
+export interface Parceiro { id: number; nome: string; rede: RedeAfiliado; cor: string | null; site: string | null; awinMerchantId: string | null; ativo: boolean; ofertas: number }
+export interface OfertaAdmin {
+  id: number; produtoId: number; parceiroId: number; parceiroNome: string; parceiroCor: string | null; rede: RedeAfiliado;
+  url: string; urlProduto: string | null; preco: number; precoAnterior: number | null; frete: number | null; parcelamento: string | null;
+  nota: number | null; avaliacoes: number | null; disponivel: boolean; ativo: boolean; verificadoEm: string | null; cliques: number;
+}
+export interface RelatorioCliques {
+  dias: number; total: number;
+  porDia: { dia: string; cliques: number }[];
+  porParceiro: { parceiroId: number; nome: string; cor: string | null; cliques: number }[];
+  topProdutos: { produtoId: number; nome: string; cliques: number }[];
+}

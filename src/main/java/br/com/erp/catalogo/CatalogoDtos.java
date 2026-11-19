@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public final class CatalogoDtos {
@@ -21,10 +22,21 @@ public final class CatalogoDtos {
     /** Vista pública do produto: sem custo, sem dados fiscais, sem estoque exato (só "últimas unidades"). */
     public record ProdutoVitrine(Long id, String codigo, String nome, BigDecimal preco, Long categoriaId, String categoriaNome,
                                  String unidade, String imagemUrl, boolean disponivel, Integer ultimasUnidades,
-                                 BigDecimal precoAnterior, Integer desconto, String detalhes, boolean novo, boolean maisVendido) {
+                                 BigDecimal precoAnterior, Integer desconto, String detalhes, boolean novo, boolean maisVendido,
+                                 List<OfertaVitrine> ofertas) {
     }
 
-    public record CatalogoResponse(Loja loja, List<CategoriaVitrine> categorias, List<ProdutoVitrine> produtos) {
+    /** Oferta numa loja parceira. O link de afiliado não vai para a vitrine: o clique passa por /api/ir/{id}. */
+    public record OfertaVitrine(Long id, Long parceiroId, String loja, String cor, BigDecimal preco, BigDecimal precoAnterior,
+                                BigDecimal frete, String parcelamento, BigDecimal nota, Integer avaliacoes,
+                                boolean disponivel, LocalDateTime verificadoEm) {
+    }
+
+    public record ParceiroVitrine(Long id, String nome, String cor, long produtos) {
+    }
+
+    public record CatalogoResponse(Loja loja, List<CategoriaVitrine> categorias, List<ProdutoVitrine> produtos,
+                                   List<ParceiroVitrine> parceiros) {
     }
 
     public record ItemPedido(@NotNull Long produtoId, @NotNull @Positive @Max(100) BigDecimal quantidade) {

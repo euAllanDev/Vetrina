@@ -6,6 +6,7 @@ import { navigate, useRoute } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import type { Categoria, Movimentacao, Page, Produto } from '../lib/types';
 import { Alert, Badge, Button, Card, Empty, ErrorState, Field, Input, NumberInput, PageHeader, Pagination, SearchInput, Segmented, Select, TableSkeleton, Tabs, Textarea } from '../components/ui';
+import { OfertasProduto } from '../components/ofertas';
 import { Drawer, useToast } from '../components/overlay';
 import { FotoUpload, ProdutoFoto } from '../components/foto';
 import { reduzirImagem } from '../lib/imagem';
@@ -107,7 +108,7 @@ const VAZIO: Form = {
 function ProdutoDrawer({ id, categorias, podeEditar, onClose, onSaved }:
   { id: number | null; categorias: Categoria[]; podeEditar: boolean; onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
-  const [tab, setTab] = useState<'dados' | 'fiscal' | 'historico'>('dados');
+  const [tab, setTab] = useState<'dados' | 'fiscal' | 'ofertas' | 'historico'>('dados');
   const [f, setF] = useState<Form>(VAZIO);
   const prod = useAsync(() => (id ? api.get<Produto>(`/produtos/${id}`) : Promise.resolve(undefined)), [id]);
   const movs = useAsync(() => (id && tab === 'historico' ? api.get<Page<Movimentacao>>('/estoque/movimentacoes', { produtoId: id, size: 30 }) : Promise.resolve(undefined)), [id, tab]);
@@ -197,10 +198,10 @@ function ProdutoDrawer({ id, categorias, podeEditar, onClose, onSaved }:
   return (
     <Drawer open onClose={onClose} wide title={id ? (p?.descricao ?? 'Produto') : 'Novo produto'}
       sub={p && <span className="row"><span className="mono">{p.codigo}</span>· {qty(p.estoqueAtual)} {p.unidade} em estoque</span>}
-      footer={podeEditar && <><Button onClick={onClose}>Cancelar</Button><Button variant="primary" loading={act.busy} onClick={() => salvar()}>{id ? 'Salvar alterações' : 'Cadastrar produto'}</Button></>}>
+      footer={podeEditar && tab !== 'ofertas' && <><Button onClick={onClose}>Cancelar</Button><Button variant="primary" loading={act.busy} onClick={() => salvar()}>{id ? 'Salvar alterações' : 'Cadastrar produto'}</Button></>}>
       {id && prod.error ? <ErrorState message={prod.error} onRetry={prod.reload} /> : (
         <>
-          <Tabs value={tab} onChange={setTab} tabs={[{ value: 'dados', label: 'Dados gerais' }, { value: 'fiscal', label: 'Fiscal' }, ...(id ? [{ value: 'historico' as const, label: 'Movimentações' }] : [])]} />
+          <Tabs value={tab} onChange={setTab} tabs={[{ value: 'dados', label: 'Dados gerais' }, { value: 'fiscal', label: 'Fiscal' }, ...(id ? [{ value: 'ofertas' as const, label: 'Ofertas (afiliados)' }, { value: 'historico' as const, label: 'Movimentações' }] : [])]} />
           {act.error && <div style={{ marginBottom: 16 }}><Alert>{act.error}</Alert></div>}
           <form onSubmit={salvar}>
             <fieldset disabled={ro} style={{ border: 0, padding: 0, margin: 0 }}>
@@ -256,6 +257,7 @@ function ProdutoDrawer({ id, categorias, podeEditar, onClose, onSaved }:
             </fieldset>
             <button type="submit" hidden />
           </form>
+          {tab === 'ofertas' && id && <OfertasProduto produtoId={id} podeEditar={podeEditar} />}
           {tab === 'historico' && (
             movs.error ? <ErrorState message={movs.error} onRetry={movs.reload} />
               : !movs.data ? <TableSkeleton rows={4} cols={4} />

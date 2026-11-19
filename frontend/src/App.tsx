@@ -20,6 +20,7 @@ import { Relatorios } from './pages/Relatorios';
 import { EmpresaPage } from './pages/Empresa';
 import { Usuarios } from './pages/Usuarios';
 import { Conta } from './pages/Conta';
+import { Afiliados } from './pages/Afiliados';
 import { Store } from './store/Store';
 
 const PAGES: Record<string, () => ReactNode> = {
@@ -34,6 +35,7 @@ const PAGES: Record<string, () => ReactNode> = {
   '/notas': () => <Notas />,
   '/financeiro': () => <Financeiro />,
   '/relatorios': () => <Relatorios />,
+  '/afiliados': () => <Afiliados />,
   '/empresa': () => <EmpresaPage />,
   '/usuarios': () => <Usuarios />,
   '/conta': () => <Conta />,

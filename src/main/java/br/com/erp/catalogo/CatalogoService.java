@@ -1,5 +1,8 @@
 package br.com.erp.catalogo;
 
+import br.com.erp.afiliado.Oferta;
+import br.com.erp.afiliado.OfertaRepository;
+import br.com.erp.afiliado.Parceiro;
 import br.com.erp.catalogo.CatalogoDtos.*;
 import br.com.erp.common.Endereco;
 import br.com.erp.common.NegocioException;
@@ -39,6 +42,7 @@ public class CatalogoService {
     private final EmpresaRepository empresaRepository;
     private final VendaService vendaService;
     private final VendaRepository vendaRepository;
+    private final OfertaRepository ofertaRepository;
 
     @Transactional(readOnly = true)
     public CatalogoResponse catalogo() {
@@ -54,8 +58,32 @@ public class CatalogoService {
         vendaRepository.maisVendidos(List.of(StatusVenda.CONFIRMADA, StatusVenda.FATURADA),
                 ate.minusDays(91), ate, PageRequest.of(0, 8)).forEach(pv -> maisVendidos.add(pv.produtoId()));
 
+        // Ofertas das lojas parceiras, agrupadas por produto (mais barata primeiro).
+        Map<Long, List<Oferta>> ofertasPorProduto = new HashMap<>();
+        Map<Long, Parceiro> parceirosUsados = new LinkedHashMap<>();
+        Map<Long, Set<Long>> produtosPorParceiro = new HashMap<>();
+        for (Oferta o : ofertaRepository.daVitrine()) {
+            ofertasPorProduto.computeIfAbsent(o.getProduto().getId(), k -> new ArrayList<>()).add(o);
+        }
+        ofertasPorProduto.values().forEach(l -> l.sort(Comparator
+                .comparing((Oferta o) -> !o.isDisponivel())
+                .thenComparing(o -> o.getPreco().add(o.getFrete() == null ? BigDecimal.ZERO : o.getFrete()))));
+        Set<Long> ativos = new HashSet<>();
+        produtos.forEach(p -> ativos.add(p.getId()));
+        ofertasPorProduto.forEach((pid, l) -> {
+            if (!ativos.contains(pid)) return;
+            l.forEach(o -> {
+                parceirosUsados.putIfAbsent(o.getParceiro().getId(), o.getParceiro());
+                produtosPorParceiro.computeIfAbsent(o.getParceiro().getId(), k -> new HashSet<>()).add(pid);
+            });
+        });
+
         List<ProdutoVitrine> vitrine = produtos.stream()
-                .map(p -> vitrine(p, novos.contains(p.getId()), maisVendidos.contains(p.getId()))).toList();
+                .map(p -> vitrine(p, novos.contains(p.getId()), maisVendidos.contains(p.getId()),
+                        ofertasPorProduto.getOrDefault(p.getId(), List.of()))).toList();
+        List<ParceiroVitrine> parceiros = parceirosUsados.values().stream()
+                .map(pa -> new ParceiroVitrine(pa.getId(), pa.getNome(), pa.getCor(), produtosPorParceiro.get(pa.getId()).size()))
+                .sorted(Comparator.comparing(ParceiroVitrine::nome)).toList();
 
         Map<Long, String> nomes = new HashMap<>();
         Map<Long, Long> contagem = new HashMap<>();
@@ -71,13 +99,18 @@ public class CatalogoService {
                 .sorted(Comparator.comparing(CategoriaVitrine::nome))
                 .toList();
 
-        return new CatalogoResponse(loja(), categorias, vitrine);
+        return new CatalogoResponse(loja(), categorias, vitrine, parceiros);
     }
 
     @Transactional
     public PedidoLojaResponse pedido(PedidoLojaRequest req) {
         if (!FORMAS_LOJA.contains(req.formaPagamento())) {
             throw new NegocioException("Forma de pagamento indisponível na loja");
+        }
+        Set<Long> deAfiliado = new HashSet<>();
+        ofertaRepository.daVitrine().forEach(o -> deAfiliado.add(o.getProduto().getId()));
+        if (req.itens().stream().anyMatch(i -> deAfiliado.contains(i.produtoId()))) {
+            throw new NegocioException("Este produto é vendido nas lojas parceiras: use o botão \"Ver na loja\".");
         }
         // Junta linhas repetidas do mesmo produto.
         Map<Long, BigDecimal> qtd = new LinkedHashMap<>();
@@ -96,16 +129,31 @@ public class CatalogoService {
                 "Recebemos seu pedido. Vamos entrar em contato pelo telefone informado para confirmar.");
     }
 
-    private ProdutoVitrine vitrine(Produto p, boolean novo, boolean maisVendido) {
+    private ProdutoVitrine vitrine(Produto p, boolean novo, boolean maisVendido, List<Oferta> ofertas) {
+        Categoria c = p.getCategoria();
+        List<OfertaVitrine> ov = ofertas.stream().map(o -> new OfertaVitrine(o.getId(), o.getParceiro().getId(),
+                o.getParceiro().getNome(), o.getParceiro().getCor(), o.getPreco(), o.getPrecoAnterior(), o.getFrete(),
+                o.getParcelamento(), o.getNota(), o.getAvaliacoes(), o.isDisponivel(), o.getVerificadoEm())).toList();
+        if (!ofertas.isEmpty()) {
+            // Produto de afiliado: preço e disponibilidade vêm da melhor oferta.
+            Oferta melhor = ofertas.get(0);
+            boolean disponivel = melhor.isDisponivel();
+            BigDecimal ant = melhor.getPrecoAnterior() != null && melhor.getPrecoAnterior().compareTo(melhor.getPreco()) > 0
+                    ? melhor.getPrecoAnterior() : null;
+            Integer desc = ant == null ? null : ant.subtract(melhor.getPreco()).multiply(BigDecimal.valueOf(100))
+                    .divide(ant, 0, java.math.RoundingMode.HALF_UP).intValue();
+            return new ProdutoVitrine(p.getId(), p.getCodigo(), p.getDescricao(), melhor.getPreco(),
+                    c == null ? null : c.getId(), c == null ? null : c.getNome(), p.getUnidade(),
+                    ProdutoResponse.from(p).imagemUrl(), disponivel, null, ant, desc, p.getDetalhes(), novo, maisVendido, ov);
+        }
         BigDecimal estoque = p.getEstoqueAtual();
         boolean disponivel = estoque.signum() > 0;
         Integer ultimas = disponivel && estoque.compareTo(BigDecimal.valueOf(5)) <= 0 ? estoque.intValue() : null;
-        Categoria c = p.getCategoria();
         boolean promocao = p.getPrecoAnterior() != null && p.getPrecoAnterior().compareTo(p.getPrecoVenda()) > 0;
         return new ProdutoVitrine(p.getId(), p.getCodigo(), p.getDescricao(), p.getPrecoVenda(),
                 c == null ? null : c.getId(), c == null ? null : c.getNome(), p.getUnidade(),
                 ProdutoResponse.from(p).imagemUrl(), disponivel, ultimas,
-                promocao ? p.getPrecoAnterior() : null, promocao ? desconto(p) : null, p.getDetalhes(), novo, maisVendido);
+                promocao ? p.getPrecoAnterior() : null, promocao ? desconto(p) : null, p.getDetalhes(), novo, maisVendido, ov);
     }
 
     private static Integer desconto(Produto p) {

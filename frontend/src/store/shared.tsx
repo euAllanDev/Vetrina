@@ -9,11 +9,19 @@ export interface Produto {
   id: number; codigo: string; nome: string; preco: number; categoriaId: number | null; categoriaNome: string | null;
   unidade: string; imagemUrl: string | null; disponivel: boolean; ultimasUnidades: number | null;
   precoAnterior: number | null; desconto: number | null; detalhes: string | null; novo: boolean; maisVendido: boolean;
+  ofertas: Oferta[];
 }
-export interface Catalogo { loja: Loja; categorias: Categoria[]; produtos: Produto[] }
+/** Oferta numa loja parceira. O clique passa por /api/ir/{id}, que conta e redireciona para o link de afiliado. */
+export interface Oferta {
+  id: number; parceiroId: number; loja: string; cor: string | null; preco: number; precoAnterior: number | null;
+  frete: number | null; parcelamento: string | null; nota: number | null; avaliacoes: number | null;
+  disponivel: boolean; verificadoEm: string | null;
+}
+export interface ParceiroV { id: number; nome: string; cor: string | null; produtos: number }
+export interface Catalogo { loja: Loja; categorias: Categoria[]; produtos: Produto[]; parceiros?: ParceiroV[] }
 
-/** Estado de navegação da loja, espelhado na URL (?c=, ?p=, ?q=, ?v=ofertas|novidades). */
-export interface Rota { p?: number; c?: number; q?: string; v?: 'ofertas' | 'novidades' | 'todos' }
+/** Estado de navegação da loja, espelhado na URL (?c=, ?p=, ?q=, ?l=loja, ?v=ofertas|novidades). */
+export interface Rota { p?: number; c?: number; q?: string; l?: number; v?: 'ofertas' | 'novidades' | 'todos' }
 
 export function lerRota(): Rota {
   const s = new URLSearchParams(window.location.search);
@@ -21,6 +29,7 @@ export function lerRota(): Rota {
   if (s.get('p')) r.p = Number(s.get('p'));
   if (s.get('c')) r.c = Number(s.get('c'));
   if (s.get('q')) r.q = s.get('q')!;
+  if (s.get('l')) r.l = Number(s.get('l'));
   const v = s.get('v');
   if (v === 'ofertas' || v === 'novidades' || v === 'todos') r.v = v;
   return r;
@@ -31,6 +40,7 @@ export function urlDe(r: Rota) {
   if (r.p) s.set('p', String(r.p));
   if (r.c) s.set('c', String(r.c));
   if (r.q) s.set('q', r.q);
+  if (r.l) s.set('l', String(r.l));
   if (r.v) s.set('v', r.v);
   const qs = s.toString();
   return `/loja${qs ? `?${qs}` : ''}`;
@@ -47,6 +57,39 @@ export function transicao(fn: () => void) {
 }
 
 export const limiteDe = (p: Produto) => p.ultimasUnidades ?? 99;
+/** Produto de afiliado: vendido nas lojas parceiras (não entra na sacola). */
+export const ehAfiliado = (p: Produto) => (p.ofertas?.length ?? 0) > 0;
+export const linkOferta = (o: Oferta) => `/api/ir/${o.id}`;
+export const freteGratis = (p: Produto) => ehAfiliado(p) && p.ofertas[0]?.frete === 0;
+
+/** "há 3 h", "há 2 dias"… */
+export function haQuanto(iso: string | null) {
+  if (!iso) return null;
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 2) return 'agora há pouco';
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `há ${h} h`;
+  const d = Math.round(h / 24);
+  return d === 1 ? 'ontem' : `há ${d} dias`;
+}
+
+/** Etiqueta da loja parceira: quadradinho na cor da loja com a inicial. */
+export function MarcaLoja({ nome, cor, size = 22 }: { nome: string; cor: string | null; size?: number }) {
+  const bg = cor ?? '#111111';
+  const claro = luminancia(bg) > 0.6;
+  return (
+    <span className="s-marca" style={{ width: size, height: size, background: bg, color: claro ? '#111' : '#fff', fontSize: size * 0.5 }} aria-hidden="true">
+      {inicial(nome)}
+    </span>
+  );
+}
+function luminancia(hex: string) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return 0;
+  const n = parseInt(m[1], 16);
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+}
 export const inicial = (nome: string) => nome.trim().charAt(0).toUpperCase();
 export const emOferta = (p: Produto) => !!p.precoAnterior && p.precoAnterior > p.preco;
 
@@ -101,6 +144,7 @@ export function Selos({ p }: { p: Produto }) {
     if (emOferta(p) && p.desconto) s.push({ t: `-${p.desconto}%`, k: 'sale' });
     if (p.novo) s.push({ t: 'Novo', k: 'new' });
     if (p.maisVendido) s.push({ t: 'Mais vendido', k: 'top' });
+    if (freteGratis(p)) s.push({ t: 'Frete grátis', k: 'frete' });
   }
   if (!s.length) return null;
   return <div className="s-selos">{s.slice(0, 2).map((x) => <span key={x.k} className={`s-selo ${x.k}`}>{x.t}</span>)}</div>;
@@ -138,30 +182,44 @@ export type Adicionar = (p: Produto, el: Element | null, q?: number) => void;
 
 export function Card({ p, i = 0, onAbrir, onAdicionar }: { p: Produto; i?: number; onAbrir: Abrir; onAdicionar: Adicionar }) {
   const media = useRef<HTMLDivElement>(null);
-  const extra = !p.disponivel ? 'Esgotado'
+  const afiliado = ehAfiliado(p);
+  const lojas = afiliado ? [...new Map(p.ofertas.map((o) => [o.parceiroId, o])).values()] : [];
+  const extra = !p.disponivel ? (afiliado ? 'Indisponível no momento' : 'Esgotado')
     : p.ultimasUnidades ? (p.ultimasUnidades === 1 ? 'Última unidade' : `Últimas ${p.ultimasUnidades} unidades`) : null;
   return (
     <article className={`s-card ${p.disponivel ? '' : 'soldout'}`} style={{ ['--i' as string]: Math.min(i, 11) }}>
       <div className="s-card-top">
-        <a href={urlDe({ p: p.id })} className="s-card-link" aria-label={`${p.nome}, ${money(p.preco)}`}
+        <a href={urlDe({ p: p.id })} className="s-card-link" aria-label={`${p.nome}, ${afiliado ? 'a partir de ' : ''}${money(p.preco)}`}
           onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey) return; e.preventDefault(); onAbrir(p, media.current); }}>
           <div className="s-card-media" ref={media}>
             <Foto p={p} />
           </div>
         </a>
         <Selos p={p} />
-        {p.disponivel && (
+        {p.disponivel && (afiliado ? (
+          <button className="s-quick" aria-label={`Comparar preços de ${p.nome}`} onClick={() => onAbrir(p, media.current)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h11M4 7l3-3M4 7l3 3M20 17H9m11 0-3-3m3 3-3 3" /></svg>
+            <span>Comparar</span>
+          </button>
+        ) : (
           <button className="s-quick" aria-label={`Adicionar ${p.nome} à sacola`} onClick={() => onAdicionar(p, media.current)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
             <span>Adicionar</span>
           </button>
-        )}
+        ))}
       </div>
       <div className="s-card-info">
         {extra && <div className={`s-card-flag ${p.disponivel ? 'warn' : ''}`}>{extra}</div>}
         <div className="s-card-name">{p.nome}</div>
         {p.categoriaNome && <div className="s-card-cat">{p.categoriaNome}</div>}
+        {afiliado && <span className="s-apartir">{lojas.length > 1 ? 'a partir de' : `na ${lojas[0].loja}`}</span>}
         <Preco p={p} />
+        {afiliado && lojas.length > 1 && (
+          <div className="s-card-lojas" title={lojas.map((o) => o.loja).join(', ')}>
+            <span className="marcas">{lojas.slice(0, 4).map((o) => <MarcaLoja key={o.parceiroId} nome={o.loja} cor={o.cor} size={18} />)}</span>
+            em {lojas.length} lojas
+          </div>
+        )}
       </div>
     </article>
   );

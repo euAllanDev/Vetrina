@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Loja: menu adaptavel, busca no celular, barra de compra e servidor acordando
+  echo Comparador de precos: lojas parceiras, ofertas, historico de preco e cliques
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM
