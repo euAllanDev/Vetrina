@@ -1,0 +1,11 @@
+target/
+.idea/
+*.iml
+.vscode/
+.env
+*.pfx
+*.p12
+node_modules/
+dist/
+*.log
+*.tar.gz
