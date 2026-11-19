@@ -58,9 +58,14 @@ export function useRevela<T extends HTMLElement>() {
     const el = ref.current;
     if (!el || visto) return;
     if (reduzMovimento() || !('IntersectionObserver' in window)) { setVisto(true); return; }
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisto(true); io.disconnect(); } }, { rootMargin: '0px 0px -12% 0px' });
+    // Já visível na montagem? Mostra direto. E nunca deixa conteúdo escondido para sempre:
+    // se o observador não disparar (aba em segundo plano, navegador antigo), revela por tempo.
+    const r = el.getBoundingClientRect();
+    if (r.top < window.innerHeight && r.bottom > 0) { setVisto(true); return; }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisto(true); io.disconnect(); } }, { rootMargin: '0px 0px -8% 0px' });
     io.observe(el);
-    return () => io.disconnect();
+    const t = window.setTimeout(() => setVisto(true), 4000);
+    return () => { io.disconnect(); window.clearTimeout(t); };
   }, [visto]);
   return [ref, visto] as const;
 }
@@ -103,11 +108,26 @@ export function Selos({ p }: { p: Produto }) {
 
 /* ============================== foto ============================== */
 export function Foto({ p, eager = false, className = '' }: { p: Produto; eager?: boolean; className?: string }) {
-  const [ok, setOk] = useState(false);
-  if (!p.imagemUrl) return <div className={`s-foto vazia ${className}`}><span>{inicial(p.nome)}</span></div>;
+  const [estado, setEstado] = useState<'carregando' | 'ok' | 'erro'>('carregando');
+  const [tentativa, setTentativa] = useState(0);
+  const img = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    setEstado('carregando');
+    setTentativa(0);
+    // Imagem já em cache pode terminar antes do onLoad ser ligado.
+    if (img.current?.complete && img.current.naturalWidth > 0) setEstado('ok');
+  }, [p.imagemUrl]);
+  // Servidor acordando (plano grátis) pode falhar a 1ª imagem: tenta de novo duas vezes.
+  const falhou = () => {
+    if (tentativa < 2) window.setTimeout(() => setTentativa((t) => t + 1), 2500 * (tentativa + 1));
+    else setEstado('erro');
+  };
+  const src = p.imagemUrl ? (tentativa ? `${p.imagemUrl}${p.imagemUrl.includes('?') ? '&' : '?'}t=${tentativa}` : p.imagemUrl) : '';
+  if (!p.imagemUrl || estado === 'erro') return <div className={`s-foto vazia ${className}`}><span>{inicial(p.nome)}</span></div>;
   return (
-    <div className={`s-foto ${ok ? 'ok' : ''} ${className}`}>
-      <img src={p.imagemUrl} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" onLoad={() => setOk(true)} />
+    <div className={`s-foto ${estado === 'ok' ? 'ok' : ''} ${className}`}>
+      <img ref={img} src={src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async"
+        onLoad={() => setEstado('ok')} onError={falhou} />
     </div>
   );
 }

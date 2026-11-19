@@ -62,8 +62,8 @@ function voarParaSacola(origem: Element | null, destino: Element | null, imagem:
 }
 
 const AVISOS = (loja: Loja | undefined) => [
-  'Peça sem pagar agora · a loja confirma com você pelo telefone',
-  'Pague como preferir: Pix, cartão de crédito, débito ou dinheiro',
+  'Peça sem pagar agora · confirmamos por telefone',
+  'Pague com Pix, cartão ou dinheiro',
   loja?.cidade ? `Atendimento a partir de ${loja.cidade}${loja.uf ? `/${loja.uf}` : ''}` : 'Sua sacola fica salva neste aparelho',
 ];
 
@@ -79,12 +79,35 @@ export function Store() {
   const [bump, setBump] = useState(0);
   const bagRef = useRef<HTMLButtonElement>(null);
 
+  // O servidor gratuito dorme quando fica sem acesso e leva alguns minutos para acordar.
+  // Em vez de mostrar erro, tenta de novo sozinho por até ~5 minutos.
+  const [acordando, setAcordando] = useState(false);
   const carregar = useCallback(() => {
+    let vivo = true;
+    let tentativa = 0;
+    const inicio = Date.now();
     setErro(null);
-    fetch('/api/catalogo')
-      .then((r) => { if (!r.ok) throw new Error(`Erro ${r.status}`); return r.json(); })
-      .then((d: Catalogo) => setDados(d))
-      .catch(() => setErro('Não foi possível carregar a vitrine agora.'));
+    const tentar = () => {
+      const ctl = new AbortController();
+      const limite = window.setTimeout(() => ctl.abort(), 25000);
+      fetch('/api/catalogo', { signal: ctl.signal })
+        .then((r) => { if (!r.ok) throw new Error(`Erro ${r.status}`); return r.json(); })
+        .then((d: Catalogo) => { if (vivo) { setDados(d); setAcordando(false); } })
+        .catch(() => {
+          if (!vivo) return;
+          tentativa++;
+          if (Date.now() - inicio < 5 * 60_000) {
+            if (tentativa >= 1) setAcordando(true);
+            window.setTimeout(tentar, 4000);
+          } else {
+            setAcordando(false);
+            setErro('Não foi possível carregar a vitrine agora.');
+          }
+        })
+        .finally(() => window.clearTimeout(limite));
+    };
+    tentar();
+    return () => { vivo = false; };
   }, []);
   useEffect(carregar, [carregar]);
 
@@ -161,8 +184,8 @@ export function Store() {
 
       <main id="s-main" className="s-main">
         {erro ? (
-          <div className="s-vazio"><span className="s-display sm">Vitrine indisponível</span><p>{erro}</p><button className="s-btn" onClick={carregar}>Tentar de novo</button></div>
-        ) : !dados ? <Carregando /> : view}
+          <div className="s-vazio"><span className="s-display sm">Vitrine indisponível</span><p>{erro}</p><button className="s-btn" onClick={() => carregar()}>Tentar de novo</button></div>
+        ) : !dados ? (acordando ? <Acordando nome={'a loja'} /> : <Carregando />) : view}
       </main>
 
       {dados && <Rodape dados={dados} ir={ir} />}
@@ -209,6 +232,7 @@ function Avisos({ itens }: { itens: string[] }) {
 }
 
 /* ============================== cabeçalho ============================== */
+const MAIS = -2;
 function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu }: {
   dados: Catalogo | null; rota: Rota; ir: (r: Rota) => void; abrir: (p: Produto, el: HTMLElement | null) => void;
   qtd: number; bump: number; bagRef: RefObject<HTMLButtonElement | null>; onSacola: () => void; onMenu: () => void;
@@ -238,6 +262,42 @@ function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu
 
   const temOfertas = dados?.produtos.some((p) => emOferta(p) && p.disponivel);
   const temNovos = dados?.produtos.some((p) => p.novo);
+
+  // Menu "prioridade +": mostra os itens que cabem e joga o resto em "Mais".
+  type ItemNav = { k: string; t: string; r: Rota; mega: number; atual: boolean; sale?: boolean };
+  const itens: ItemNav[] = [
+    ...(temNovos ? [{ k: 'nov', t: 'Novidades', r: { v: 'novidades' as const }, mega: -1, atual: rota.v === 'novidades' }] : []),
+    ...(dados?.categorias ?? []).map((c) => ({ k: `c${c.id}`, t: c.nome, r: { c: c.id }, mega: c.id, atual: rota.c === c.id })),
+  ];
+  const ofertas: ItemNav | null = temOfertas ? { k: 'of', t: 'Ofertas', r: { v: 'ofertas' }, mega: -1, atual: rota.v === 'ofertas', sale: true } : null;
+  const navRef = useRef<HTMLElement>(null);
+  const reguaRef = useRef<HTMLDivElement>(null);
+  const [cabem, setCabem] = useState(99);
+  const chaveItens = itens.map((x) => x.t).join('|');
+  useEffect(() => {
+    const nav = navRef.current, regua = reguaRef.current;
+    if (!nav || !regua) return;
+    const medir = () => {
+      const w = [...regua.children].map((el) => (el as HTMLElement).offsetWidth);
+      const n = itens.length;
+      const wMais = w[n] ?? 80;
+      const wOf = ofertas ? (w[n + 1] ?? 0) : 0;
+      const livre = nav.clientWidth - 8;
+      let total = wOf, c = 0;
+      for (let i = 0; i < n; i++) {
+        const resto = i < n - 1 ? wMais : 0;
+        if (total + w[i] + resto <= livre) { total += w[i]; c++; } else break;
+      }
+      setCabem(c);
+    };
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(nav);
+    document.fonts?.ready.then(medir).catch(() => {});
+    return () => ro.disconnect();
+  }, [chaveItens, !!ofertas]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visiveis = itens.slice(0, cabem);
+  const sobra = itens.slice(cabem);
   const catMega = dados?.categorias.find((c) => c.id === mega);
   const prodMega = catMega ? dados!.produtos.filter((p) => p.categoriaId === catMega.id && p.imagemUrl)
     .sort((a, b) => Number(b.maisVendido) - Number(a.maisVendido) || Number(b.novo) - Number(a.novo)).slice(0, 4) : [];
@@ -248,21 +308,29 @@ function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu
         <button className="s-icon-btn s-only-mobile" aria-label="Abrir menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
         <a className="s-brand" href="/loja" onClick={(e) => { e.preventDefault(); ir({}); }}>{dados?.loja.nome ?? ' '}</a>
 
-        <nav className="s-nav" aria-label="Categorias">
-          {temNovos && (
-            <a href={urlDe({ v: 'novidades' })} aria-current={rota.v === 'novidades' ? 'page' : undefined}
-              onMouseEnter={() => entrar(-1)} onClick={(e) => { e.preventDefault(); ir({ v: 'novidades' }); }}>Novidades</a>
-          )}
-          {dados?.categorias.map((c) => (
-            <a key={c.id} href={urlDe({ c: c.id })} aria-current={rota.c === c.id ? 'page' : undefined}
-              className={mega === c.id ? 'hover' : ''} aria-haspopup="true" aria-expanded={mega === c.id}
-              onMouseEnter={() => entrar(c.id)} onFocus={() => setMega(null)}
-              onClick={(e) => { e.preventDefault(); setMega(null); ir({ c: c.id }); }}>{c.nome}</a>
+        <nav className="s-nav" aria-label="Categorias" ref={navRef}>
+          {visiveis.map((x) => (
+            <a key={x.k} href={urlDe(x.r)} aria-current={x.atual ? 'page' : undefined}
+              className={`${x.sale ? 'sale' : ''} ${mega === x.mega && x.mega > 0 ? 'hover' : ''}`}
+              onMouseEnter={() => entrar(x.mega)} onFocus={() => setMega(null)}
+              onClick={(e) => { e.preventDefault(); setMega(null); ir(x.r); }}>{x.t}</a>
           ))}
-          {temOfertas && (
-            <a href={urlDe({ v: 'ofertas' })} className="sale" aria-current={rota.v === 'ofertas' ? 'page' : undefined}
-              onMouseEnter={() => entrar(-1)} onClick={(e) => { e.preventDefault(); ir({ v: 'ofertas' }); }}>Ofertas</a>
+          {sobra.length > 0 && (
+            <button type="button" className={`s-nav-mais ${mega === MAIS ? 'hover' : ''}`} aria-haspopup="true" aria-expanded={mega === MAIS}
+              onMouseEnter={() => entrar(MAIS)} onClick={() => setMega((m) => (m === MAIS ? null : MAIS))}>
+              Mais <Seta dir="down" size={14} />
+            </button>
           )}
+          {ofertas && (
+            <a href={urlDe(ofertas.r)} className="sale" aria-current={ofertas.atual ? 'page' : undefined}
+              onMouseEnter={() => entrar(-1)} onClick={(e) => { e.preventDefault(); setMega(null); ir(ofertas.r); }}>{ofertas.t}</a>
+          )}
+          {/* régua invisível: mede a largura de cada item para decidir quantos cabem */}
+          <div className="s-nav-regua" aria-hidden="true" ref={reguaRef}>
+            {itens.map((x) => <span key={x.k}>{x.t}</span>)}
+            <span>Mais ⌄</span>
+            {ofertas && <span>{ofertas.t}</span>}
+          </div>
         </nav>
 
         <div className="s-head-tools">
@@ -274,7 +342,29 @@ function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu
         </div>
       </div>
 
-      <div className={`s-mega ${catMega ? 'on' : ''}`} onMouseEnter={() => window.clearTimeout(timer.current)} aria-hidden={!catMega}>
+      <div className={`s-mega ${catMega || mega === MAIS ? 'on' : ''}`} onMouseEnter={() => window.clearTimeout(timer.current)} aria-hidden={!catMega && mega !== MAIS}>
+        {mega === MAIS && sobra.length > 0 && dados && (
+          <div className="s-mega-in mais" key="mais">
+            <div className="s-mega-side">
+              <span className="s-slide-kicker dark">Mais categorias</span>
+              <span className="s-display sm">Explore</span>
+              <a className="s-link-strong" href={urlDe({ v: 'todos' })} tabIndex={-1}
+                onClick={(e) => { e.preventDefault(); setMega(null); ir({ v: 'todos' }); }}>Todos os produtos <Seta size={16} /></a>
+            </div>
+            <div className="s-mega-grid">
+              {sobra.map((x, n) => {
+                const capa = dados.produtos.find((p) => p.imagemUrl && (x.mega > 0 ? p.categoriaId === x.mega : p.novo));
+                return (
+                  <a key={x.k} href={urlDe(x.r)} className="s-mega-item cat" style={{ ['--i' as string]: n }} tabIndex={-1}
+                    onClick={(e) => { e.preventDefault(); setMega(null); ir(x.r); }}>
+                    {capa ? <Foto p={capa} /> : <div className="s-foto vazia" />}
+                    <span className="nome">{x.t}</span>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {catMega && (
           <div className="s-mega-in" key={catMega.id}>
             <div className="s-mega-side">
@@ -330,7 +420,10 @@ function Busca({ dados, ir, abrir, inicial: ini }: { dados: Catalogo; ir: (r: Ro
   return (
     <form className={`s-busca ${foco ? 'foco' : ''}`} role="search" onSubmit={enviar}
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setFoco(false); }}>
-      <Icon name="search" size={18} />
+      <button type="button" className="s-busca-ico" aria-label="Abrir busca" tabIndex={foco ? -1 : 0}
+        onClick={() => { setFoco(true); window.setTimeout(() => input.current?.focus(), 30); }}>
+        <Icon name="search" size={18} />
+      </button>
       <input ref={input} value={t} placeholder="Buscar" aria-label="Buscar produtos" autoComplete="off"
         role="combobox" aria-expanded={aberto} aria-controls="s-sug" aria-activedescendant={ativo >= 0 ? `s-sug-${ativo}` : undefined}
         onFocus={() => setFoco(true)} onChange={(e) => { setT(e.target.value); setAtivo(-1); }}
@@ -387,6 +480,17 @@ function MenuMobile({ dados, ir, onFechar }: { dados: Catalogo; ir: (r: Rota) =>
         <a className="s-menu-equipe" href="/">Área da equipe</a>
       </aside>
     </>
+  );
+}
+
+/* ============================== servidor acordando ============================== */
+function Acordando({ nome }: { nome: string }) {
+  return (
+    <div className="s-acordando" role="status" aria-live="polite">
+      <div className="s-acordando-anel" aria-hidden="true"><span /><span /><span /></div>
+      <span className="s-display sm">Abrindo as portas</span>
+      <p>Estamos preparando {nome} para você. Isso pode levar até um minuto na primeira visita.</p>
+    </div>
   );
 }
 

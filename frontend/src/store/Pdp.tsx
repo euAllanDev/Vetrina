@@ -9,6 +9,22 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
   const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
   const [aberta, setAberta] = useState<string | null>('desc');
   const media = useRef<HTMLDivElement>(null);
+  const compra = useRef<HTMLDivElement>(null);
+  const [barra, setBarra] = useState(false);
+  useEffect(() => {
+    // Barra fixa de compra (celular) aparece quando o botão principal já ficou para trás na rolagem.
+    let raf = 0;
+    const checar = () => {
+      raf = 0;
+      const el = compra.current;
+      if (el) setBarra(el.getBoundingClientRect().bottom < 0);
+    };
+    const on = () => { if (!raf) raf = requestAnimationFrame(checar); };
+    checar();
+    window.addEventListener('scroll', on, { passive: true });
+    window.addEventListener('resize', on);
+    return () => { window.removeEventListener('scroll', on); window.removeEventListener('resize', on); if (raf) cancelAnimationFrame(raf); };
+  }, [p.id]);
   const max = Math.max(0, limiteDe(p) - naSacola);
   useEffect(() => { setQ(1); setAberta('desc'); }, [p.id]);
 
@@ -72,7 +88,7 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
 
             <div className={`s-disp ${disp.k}`}><span className="dot" />{disp.t}</div>
 
-            <div className="s-pdp-buy">
+            <div className="s-pdp-buy" ref={compra}>
               {p.disponivel && (
                 <div className="s-qty" aria-label="Quantidade">
                   <button aria-label="Diminuir" disabled={q <= 1} onClick={() => setQ((x) => Math.max(1, x - 1))}>−</button>
@@ -106,6 +122,17 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
           </div>
         </div>
       </div>
+
+      {p.disponivel && (
+        <div className={`s-buybar ${barra ? 'on' : ''}`} aria-hidden={!barra}>
+          <div className="s-buybar-info">
+            <span className="nome">{p.nome}</span>
+            <Preco p={p} />
+          </div>
+          <button className="s-btn" tabIndex={barra ? 0 : -1} disabled={max === 0}
+            onClick={() => onAdicionar(p, media.current, 1)}>{max === 0 ? 'Limite' : 'Adicionar'}</button>
+        </div>
+      )}
 
       {relacionados.length > 0 && (
         <Trilho titulo="Da mesma categoria" sub={p.categoriaNome ?? undefined}>
