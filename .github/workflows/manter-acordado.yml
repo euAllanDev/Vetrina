@@ -3,9 +3,12 @@
 # A rota /actuator/health não consulta o banco, então o Neon continua dormindo quando ninguém usa.
 name: Manter acordado
 
+# Horários em UTC (Brasília = UTC-3). Pausa das 02:00 às 08:00 de Brasília (05:00–11:00 UTC):
+# a última visita é 01:50 e às 07:50 ele é acordado para estar pronto às 08:00.
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/10 0-4,11-23 * * *"
+    - cron: "50 10 * * *"
   workflow_dispatch: {}
 
 jobs:

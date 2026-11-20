@@ -11,6 +11,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalTime;
+import java.time.ZoneId;
 
 /**
  * O plano grátis do Render desliga o servidor depois de 15 minutos sem receber visitas, e ele leva
@@ -19,6 +21,9 @@ import java.time.Duration;
  *
  * <p>Usa {@code /actuator/health}, que não consulta o banco ({@code management.health.db.enabled=false}):
  * assim o Neon continua dormindo quando não há uso de verdade e não gasta as horas grátis.
+ *
+ * <p>Entre {@code pausa-inicio} e {@code pausa-fim} (padrão 02:00–08:00, horário de Brasília) não visita:
+ * o servidor dorme de madrugada e economiza horas do plano grátis. Quem entrar nesse horário só espera ele acordar.
  *
  * <p>O endereço vem de {@code RENDER_EXTERNAL_URL}, que o Render preenche sozinho. Fora do Render
  * (ou com {@code MANTER_ACORDADO=false}) não faz nada.
@@ -30,20 +35,38 @@ public class ManterAcordado {
 
     private final String url;
     private final boolean ligado;
+    private final LocalTime pausaInicio;
+    private final LocalTime pausaFim;
+    private final ZoneId zona;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
 
     public ManterAcordado(@Value("${app.manter-acordado.url:}") String url,
-                          @Value("${app.manter-acordado.ligado:true}") boolean ligado) {
+                          @Value("${app.manter-acordado.ligado:true}") boolean ligado,
+                          @Value("${app.manter-acordado.pausa-inicio:02:00}") String pausaInicio,
+                          @Value("${app.manter-acordado.pausa-fim:08:00}") String pausaFim,
+                          @Value("${app.manter-acordado.zona:America/Sao_Paulo}") String zona) {
         this.url = url == null ? "" : url.replaceAll("/+$", "");
         this.ligado = ligado;
+        this.pausaInicio = pausaInicio.isBlank() ? null : LocalTime.parse(pausaInicio);
+        this.pausaFim = pausaFim.isBlank() ? null : LocalTime.parse(pausaFim);
+        this.zona = ZoneId.of(zona);
         if (ligado && !this.url.isBlank()) {
-            log.info("Manter acordado: visitando {}/actuator/health a cada 10 minutos", this.url);
+            log.info("Manter acordado: visitando {}/actuator/health a cada 10 minutos{}", this.url,
+                    this.pausaInicio != null && this.pausaFim != null ? " (pausa das " + this.pausaInicio + " às " + this.pausaFim + ")" : "");
         }
+    }
+
+    /** Se a hora cai na pausa da madrugada. Aceita faixa que vira o dia (ex.: 23:00–06:00). */
+    boolean emPausa(LocalTime agora) {
+        if (pausaInicio == null || pausaFim == null || pausaInicio.equals(pausaFim)) return false;
+        return pausaInicio.isBefore(pausaFim)
+                ? !agora.isBefore(pausaInicio) && agora.isBefore(pausaFim)
+                : !agora.isBefore(pausaInicio) || agora.isBefore(pausaFim);
     }
 
     @Scheduled(initialDelayString = "PT2M", fixedDelayString = "${app.manter-acordado.intervalo:PT10M}")
     public void cutucar() {
-        if (!ligado || url.isBlank()) return;
+        if (!ligado || url.isBlank() || emPausa(LocalTime.now(zona))) return;
         try {
             HttpRequest req = HttpRequest.newBuilder(URI.create(url + "/actuator/health"))
                     .timeout(Duration.ofSeconds(30))

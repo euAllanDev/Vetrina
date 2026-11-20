@@ -63,6 +63,10 @@ app:
     # O Render preenche RENDER_EXTERNAL_URL sozinho; MANTER_ACORDADO=false desliga.
     url: ${MANTER_ACORDADO_URL:${RENDER_EXTERNAL_URL:}}
     ligado: ${MANTER_ACORDADO:true}
+    # De madrugada deixa dormir (horário de Brasília). Para manter 24 h, deixe as duas vazias.
+    pausa-inicio: ${MANTER_ACORDADO_PAUSA_INICIO:02:00}
+    pausa-fim: ${MANTER_ACORDADO_PAUSA_FIM:08:00}
+    zona: America/Sao_Paulo
   estoque:
     permitir-negativo: ${ESTOQUE_PERMITIR_NEGATIVO:false}
   nfe:
