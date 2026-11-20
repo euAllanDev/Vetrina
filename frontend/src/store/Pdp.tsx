@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { money } from '../lib/format';
 import { HistoricoPreco, Ofertas } from './Comparador';
-import { Card, Compartilhar, MarcaLoja, Preco, Selos, Seta, Trilho, ehAfiliado, haQuanto, naLoja, inicial, limiteDe, linkOferta, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
+import { Card, Compartilhar, Coracao, MarcaLoja, Preco, Selos, Seta, Trilho, ehAfiliado, haQuanto, naLoja, inicial, limiteDe, linkOferta, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
 
 interface Props { p: Produto; dados: Catalogo; naSacola: number; ir: (r: Rota) => void; onAbrir: Abrir; onAdicionar: Adicionar }
 
@@ -89,6 +89,7 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
             ? <img src={p.imagemUrl} alt={p.nome} style={zoom ? { transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined} />
             : <div className="s-foto vazia"><span style={{ fontSize: 'min(30vw, 260px)' }}>{inicial(p.nome)}</span></div>}
           <Selos p={p} />
+          <Coracao p={p} />
         </div>
 
         <div className="s-pdp-info">

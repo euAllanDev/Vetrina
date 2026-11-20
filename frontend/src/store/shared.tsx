@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { money } from '../lib/format';
 
@@ -23,7 +23,7 @@ export interface ParceiroV { id: number; nome: string; cor: string | null; produ
 export interface Catalogo { loja: Loja; categorias: Categoria[]; produtos: Produto[]; parceiros?: ParceiroV[] }
 
 /** Estado de navegação da loja, espelhado na URL (?c=, ?p=, ?q=, ?l=loja, ?v=ofertas|novidades). */
-export interface Rota { p?: number; c?: number; q?: string; l?: number; v?: 'ofertas' | 'novidades' | 'todos' | 'baixou' }
+export interface Rota { p?: number; c?: number; q?: string; l?: number; v?: 'ofertas' | 'novidades' | 'todos' | 'baixou' | 'favoritos' }
 
 export function lerRota(): Rota {
   const s = new URLSearchParams(window.location.search);
@@ -36,7 +36,7 @@ export function lerRota(): Rota {
   if (s.get('q')) r.q = s.get('q')!;
   if (s.get('l')) r.l = Number(s.get('l'));
   const v = s.get('v');
-  if (v === 'ofertas' || v === 'novidades' || v === 'todos' || v === 'baixou') r.v = v;
+  if (v === 'ofertas' || v === 'novidades' || v === 'todos' || v === 'baixou' || v === 'favoritos') r.v = v;
   return r;
 }
 
@@ -194,7 +194,7 @@ export function Foto({ p, eager = false, className = '' }: { p: Produto; eager?:
 export type Abrir = (p: Produto, foto: HTMLElement | null) => void;
 export type Adicionar = (p: Produto, el: Element | null, q?: number) => void;
 
-export function Card({ p, i = 0, onAbrir, onAdicionar }: { p: Produto; i?: number; onAbrir: Abrir; onAdicionar: Adicionar }) {
+export function Card({ p, i = 0, onAbrir, onAdicionar, salvoPor }: { p: Produto; i?: number; onAbrir: Abrir; onAdicionar: Adicionar; salvoPor?: number }) {
   const media = useRef<HTMLDivElement>(null);
   const afiliado = ehAfiliado(p);
   const lojas = afiliado ? [...new Map(p.ofertas.map((o) => [o.parceiroId, o])).values()] : [];
@@ -210,6 +210,7 @@ export function Card({ p, i = 0, onAbrir, onAdicionar }: { p: Produto; i?: numbe
           </div>
         </a>
         <Selos p={p} />
+        <Coracao p={p} />
         {p.disponivel && (afiliado ? (
           <button className="s-quick" aria-label={`Comparar preços de ${p.nome}`} onClick={() => onAbrir(p, media.current)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h11M4 7l3-3M4 7l3 3M20 17H9m11 0-3-3m3 3-3 3" /></svg>
@@ -228,6 +229,9 @@ export function Card({ p, i = 0, onAbrir, onAdicionar }: { p: Produto; i?: numbe
         {p.categoriaNome && <div className="s-card-cat">{p.categoriaNome}</div>}
         {afiliado && <span className="s-apartir">{lojas.length > 1 ? 'a partir de' : naLoja(lojas[0].loja)}</span>}
         <Preco p={p} />
+        {salvoPor != null && salvoPor > p.preco && (
+          <div className="s-card-salvo">{money(salvoPor - p.preco)} mais barato desde que você salvou</div>
+        )}
         {afiliado && lojas.length > 1 && (
           <div className="s-card-lojas" title={lojas.map((o) => o.loja).join(', ')}>
             <span className="marcas">{lojas.slice(0, 4).map((o) => <MarcaLoja key={o.parceiroId} nome={o.loja} cor={o.cor} size={18} />)}</span>
@@ -316,7 +320,8 @@ export function Compartilhar({ p, loja }: { p: Produto; loja: string }) {
   const texto = `${p.nome} por ${money(p.preco)}${emOferta(p) && p.desconto ? ` (${p.desconto}% off)` : ''} na ${loja}`;
   const nativo = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   return (
-    <div className="s-share" role="group" aria-label="Compartilhar">
+    <div className="s-share" role="group" aria-label="Salvar e compartilhar">
+      <SalvarFavorito p={p} />
       <a className="s-share-btn" href={`https://wa.me/?text=${encodeURIComponent(`${texto}\n${url}`)}`} target="_blank" rel="noopener noreferrer">
         <IcoMsg />WhatsApp
       </a>
@@ -356,5 +361,86 @@ export function CompartilharLista({ titulo, loja, produtos, rota }: { titulo: st
         <IcoLink />{copiado === 'texto' ? 'Texto copiado' : 'Copiar texto da lista'}
       </button>
     </div>
+  );
+}
+
+/* ============================== favoritos ============================== */
+// Ficam no aparelho (sem cadastro): id do produto -> preço no momento em que foi salvo.
+type Favoritos = Record<number, number>;
+const FAV_CHAVE = 'loja.favoritos';
+const lerFavs = (): Favoritos => {
+  try { const v = JSON.parse(localStorage.getItem(FAV_CHAVE) || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+};
+let favs: Favoritos = typeof window === 'undefined' ? {} : lerFavs();
+const ouvintes = new Set<() => void>();
+const avisar = () => ouvintes.forEach((f) => f());
+function gravarFavs(n: Favoritos) {
+  favs = n;
+  try { localStorage.setItem(FAV_CHAVE, JSON.stringify(n)); } catch { /* sem armazenamento: vale só nesta visita */ }
+  avisar();
+}
+function assinar(f: () => void) {
+  ouvintes.add(f);
+  // Outra aba mudou os favoritos.
+  const onStorage = (e: StorageEvent) => { if (e.key === FAV_CHAVE) { favs = lerFavs(); avisar(); } };
+  window.addEventListener('storage', onStorage);
+  return () => { ouvintes.delete(f); window.removeEventListener('storage', onStorage); };
+}
+
+export function useFavoritos() {
+  const f = useSyncExternalStore(assinar, () => favs, () => favs);
+  return {
+    favs: f,
+    salvo: (id: number) => id in f,
+    alternar: (p: Produto) => {
+      const n = { ...favs };
+      if (p.id in n) delete n[p.id]; else n[p.id] = p.preco;
+      gravarFavs(n);
+      return p.id in n;
+    },
+  };
+}
+
+const IcoCoracao = ({ cheio }: { cheio: boolean }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={cheio ? 'cheio' : ''}>
+    <path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 7.9 3.6 4.5 7.1 4.5c2 0 3.6 1.1 4.9 2.9 1.3-1.8 2.9-2.9 4.9-2.9 3.5 0 5.7 3.4 4.4 6.8-1.8 4.6-9.3 9.2-9.3 9.2z" />
+  </svg>
+);
+
+/** Coração sobre a foto do cartão. */
+export function Coracao({ p }: { p: Produto }) {
+  const { salvo, alternar } = useFavoritos();
+  const on = salvo(p.id);
+  const [pulso, setPulso] = useState(0);
+  return (
+    <button className={`s-fav ${on ? 'on' : ''}`} aria-pressed={on} aria-label={on ? `Tirar ${p.nome} dos favoritos` : `Salvar ${p.nome} nos favoritos`}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (alternar(p)) setPulso((x) => x + 1); }}>
+      <span key={pulso} className={pulso ? 'pulso' : ''}><IcoCoracao cheio={on} /></span>
+    </button>
+  );
+}
+
+/** Botão "Salvar" ao lado de compartilhar, na página do produto. */
+export function SalvarFavorito({ p }: { p: Produto }) {
+  const { salvo, alternar } = useFavoritos();
+  const on = salvo(p.id);
+  return (
+    <button className={`s-share-btn s-fav-btn ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => alternar(p)}>
+      <IcoCoracao cheio={on} />{on ? 'Salvo nos favoritos' : 'Salvar'}
+    </button>
+  );
+}
+
+/** Ícone do topo com a contagem; leva para "Meus favoritos". */
+export function BotaoFavoritos({ ir, ativo, produtos }: { ir: (r: Rota) => void; ativo: boolean; produtos: Produto[] }) {
+  const { favs: f } = useFavoritos();
+  const n = produtos.filter((p) => p.id in f).length;
+  return (
+    <a href={urlDe({ v: 'favoritos' })} className="s-icon-btn s-fav-top" aria-current={ativo ? 'page' : undefined}
+      aria-label={`Meus favoritos, ${n} ${n === 1 ? 'produto' : 'produtos'}`}
+      onClick={(e) => { e.preventDefault(); ir({ v: 'favoritos' }); }}>
+      <IcoCoracao cheio={ativo} />
+      {n > 0 && <span key={n} className="s-count bump">{n}</span>}
+    </a>
   );
 }

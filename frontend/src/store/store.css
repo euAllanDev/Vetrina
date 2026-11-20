@@ -744,3 +744,23 @@
 .s-share-btn:hover { background: var(--s-soft); border-color: var(--s-ink-3); }
 .s-share-btn:active { transform: scale(0.97); }
 .s-share-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ============================== favoritos ============================== */
+.s-fav {
+  position: absolute; top: 10px; right: 10px; width: 38px; height: 38px; border-radius: 999px; display: grid; place-items: center;
+  background: rgba(255,255,255,.92); color: var(--s-ink); box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  transition: transform 160ms var(--s-ease), background 160ms;
+}
+.s-fav:hover { transform: scale(1.08); background: #fff; }
+.s-fav:active { transform: scale(0.92); }
+.s-fav svg, .s-fav-top svg, .s-fav-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.s-fav-btn svg { width: 16px; height: 16px; }
+.s-fav svg.cheio, .s-fav-btn svg.cheio { fill: var(--s-sale); stroke: var(--s-sale); }
+.s-fav-top svg.cheio { fill: var(--s-ink); }
+.s-fav span { display: grid; place-items: center; }
+.s-fav span.pulso { animation: s-bump 520ms var(--s-ease); }
+.s-fav-btn.on { border-color: var(--s-sale); color: var(--s-sale); }
+.s-card-salvo { margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--s-ok, #0a7a3d); }
+@media (prefers-reduced-motion: reduce) { .s-fav span.pulso { animation: none; } }
+.s-pdp-media .s-fav { top: 16px; right: 16px; width: 44px; height: 44px; z-index: 2; }
+.s-pdp-media .s-fav svg { width: 22px; height: 22px; }

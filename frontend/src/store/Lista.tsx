@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { money } from '../lib/format';
-import { Card, CompartilharLista, MarcaLoja, baixou, ehAfiliado, emOferta, freteGratis, transicao, urlDe, type Abrir, type Adicionar, type Catalogo, type Rota } from './shared';
+import { Card, CompartilharLista, MarcaLoja, useFavoritos, baixou, ehAfiliado, emOferta, freteGratis, transicao, urlDe, type Abrir, type Adicionar, type Catalogo, type Rota } from './shared';
 
 type Ordem = 'relevancia' | 'menor' | 'maior' | 'az' | 'desconto';
 const ORDENS: { v: Ordem; t: string }[] = [
@@ -45,6 +45,8 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
   const cat = dados.categorias.find((c) => c.id === rota.c);
   const lojaRota = dados.parceiros?.find((x) => x.id === rota.l);
   const termo = rota.q?.trim() ?? '';
+  const { favs } = useFavoritos();
+  const favoritos = rota.v === 'favoritos';
 
   const base = useMemo(() => {
     let l = dados.produtos;
@@ -52,12 +54,13 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
     if (lojaRota) l = l.filter((p) => p.ofertas?.some((o) => o.parceiroId === lojaRota.id));
     if (rota.v === 'novidades') l = l.filter((p) => p.novo);
     if (rota.v === 'baixou') l = l.filter(baixou);
+    if (rota.v === 'favoritos') l = l.filter((p) => p.id in favs);
     if (termo) {
       const t = semAcento(termo).split(/\s+/);
       l = l.filter((p) => { const alvo = semAcento(`${p.nome} ${p.categoriaNome ?? ''} ${p.codigo}`); return t.every((x) => alvo.includes(x)); });
     }
     return l;
-  }, [dados, cat, lojaRota, rota.v, termo]);
+  }, [dados, cat, lojaRota, rota.v, termo, favs]);
 
   const lista = useMemo(() => {
     const f = FAIXAS.find((x) => x.id === faixa);
@@ -74,7 +77,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
   }, [base, soOferta, soDisp, faixa, ordem, soFrete, lojasSel]);
 
   const faixasUteis = FAIXAS.filter((f) => base.some((p) => p.preco >= f.min && p.preco < f.max));
-  const titulo = termo ? `“${termo}”` : lojaRota ? lojaRota.nome : cat ? cat.nome : rota.v === 'ofertas' ? 'Ofertas' : rota.v === 'novidades' ? 'Novidades' : rota.v === 'baixou' ? 'Baixaram de preço' : 'Todos os produtos';
+  const titulo = termo ? `“${termo}”` : lojaRota ? lojaRota.nome : cat ? cat.nome : rota.v === 'ofertas' ? 'Ofertas' : rota.v === 'novidades' ? 'Novidades' : rota.v === 'baixou' ? 'Baixaram de preço' : favoritos ? 'Meus favoritos' : 'Todos os produtos';
   const filtros = Number(soOferta) + Number(soDisp) + Number(!!faixa) + Number(soFrete) + lojasSel.length;
   const mudar = (fn: () => void) => transicao(fn);
   const limpar = () => mudar(() => { setSoOferta(false); setSoDisp(false); setFaixa(null); setSoFrete(false); setLojasSel([]); });
@@ -100,7 +103,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
           {precos.length > 1 && ` · de ${money(Math.min(...precos))} a ${money(Math.max(...precos))}`}
         </p>
         {!termo && <CompartilharLista titulo={rota.v === 'ofertas' ? 'Ofertas de hoje' : titulo} loja={dados.loja.nome} produtos={lista} rota={rota} />}
-        {!termo && !lojaRota && (
+        {!termo && !lojaRota && !favoritos && (
           <div className="s-chips cats" role="list">
             <a role="listitem" href={urlDe({ v: 'todos' })} className="s-chip" aria-current={!cat && rota.v !== 'ofertas' && rota.v !== 'novidades'}
               onClick={(e) => { e.preventDefault(); ir({ v: 'todos' }); }}>Tudo</a>
@@ -142,7 +145,13 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
         </div>
       </div>
 
-      {lista.length === 0 ? (
+      {lista.length === 0 && favoritos && filtros === 0 ? (
+        <div className="s-vazio">
+          <span className="s-display sm">Nenhum favorito ainda</span>
+          <p>Toque no coração de um produto para guardar aqui. Quando o preço baixar, você vê nesta página quanto ficou mais barato desde que salvou.</p>
+          <button className="s-btn" onClick={() => ir({ v: 'ofertas' })}>Ver ofertas</button>
+        </div>
+      ) : lista.length === 0 ? (
         <div className="s-vazio">
           <span className="s-display sm">Nada por aqui</span>
           <p>{termo ? `Nenhum produto encontrado para “${termo}”.` : 'Nenhum produto com esses filtros.'}</p>
@@ -153,7 +162,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
         <div className="s-grid" aria-live="polite">
           {lista.map((p, i) => (
             <div key={p.id} style={{ viewTransitionName: `item-${p.id}` }}>
-              <Card p={p} i={i} onAbrir={onAbrir} onAdicionar={onAdicionar} />
+              <Card p={p} i={i} onAbrir={onAbrir} onAdicionar={onAdicionar} salvoPor={favoritos ? favs[p.id] : undefined} />
             </div>
           ))}
         </div>

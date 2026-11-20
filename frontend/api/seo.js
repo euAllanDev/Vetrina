@@ -87,6 +87,7 @@ function montar(o, q, d) {
     };
   }
 
+  if (q.v === 'favoritos') return { ...base, titulo: `Meus favoritos | ${loja}`, url: `${o}/loja?v=favoritos`, indexar: false };
   if (q.q) return { ...base, titulo: `Busca: ${corta(q.q, 60)} | ${loja}`, indexar: false };
   if (q.l || q.v) return { ...base, url: `${o}/loja?${q.l ? `l=${q.l}` : `v=${q.v}`}`, img: urlImagem(o, capa(maiorDesconto) || capa(ativos)) };
 

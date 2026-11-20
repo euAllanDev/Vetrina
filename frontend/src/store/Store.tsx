@@ -5,7 +5,7 @@ import { Home } from './Home';
 import { Lista } from './Lista';
 import { Pdp } from './Pdp';
 import {
-  Foto, Preco, Seta, ehAfiliado, emOferta, inicial, lerRota, limiteDe, reduzMovimento, transicao, urlDe,
+  BotaoFavoritos, Foto, Preco, Seta, ehAfiliado, emOferta, inicial, lerRota, limiteDe, reduzMovimento, transicao, urlDe,
   type Catalogo, type Loja, type Produto, type Rota,
 } from './shared';
 import './store.css';
@@ -144,7 +144,7 @@ export function Store() {
     const nome = dados?.loja.nome ?? 'Loja';
     const cat = dados?.categorias.find((c) => c.id === rota.c);
     const lj = dados?.parceiros?.find((x) => x.id === rota.l);
-    document.title = produto ? `${produto.nome} — ${nome}` : lj ? `${lj.nome} — ${nome}` : cat ? `${cat.nome} — ${nome}` : rota.q ? `Busca: ${rota.q} — ${nome}` : nome;
+    document.title = produto ? `${produto.nome} — ${nome}` : rota.v === 'favoritos' ? `Meus favoritos — ${nome}` : lj ? `${lj.nome} — ${nome}` : cat ? `${cat.nome} — ${nome}` : rota.q ? `Busca: ${rota.q} — ${nome}` : nome;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#ffffff');
     // Mantém descrição e endereço canônico em dia ao navegar (a primeira carga já vem pronta do servidor).
     if (!dados) return;
@@ -352,6 +352,7 @@ function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu
 
         <div className="s-head-tools">
           {dados && <Busca dados={dados} ir={ir} abrir={abrir} inicial={rota.q ?? ''} />}
+          {dados && <BotaoFavoritos ir={ir} ativo={rota.v === 'favoritos'} produtos={dados.produtos} />}
           {/* Sacola só faz sentido quando a loja vende produtos próprios; no comparador tudo é comprado no parceiro. */}
           {dados?.produtos.some((p) => !ehAfiliado(p)) && (
             <button ref={bagRef} className="s-icon-btn s-bag-btn" aria-label={`Sacola, ${qtd} ${qtd === 1 ? 'item' : 'itens'}`} onClick={onSacola}>
