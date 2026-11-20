@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { money } from '../lib/format';
-import { MarcaLoja, haQuanto, linkOferta, type Oferta, type Produto } from './shared';
+import { MarcaLoja, haQuanto, linkOferta, naLoja, type Oferta, type Produto } from './shared';
 
 /* ============================== lista de ofertas ============================== */
 
@@ -63,7 +63,7 @@ export function Ofertas({ p, onRef }: { p: Produto; onRef?: (el: HTMLDivElement 
               </div>
               {o.disponivel ? (
                 <a className={`s-btn s-oferta-btn ${top || ofertas.length === 1 ? '' : 'ghost'}`} href={linkOferta(o)} target="_blank" rel="sponsored nofollow noopener noreferrer"
-                  aria-label={`Ver ${p.nome} na ${o.loja} por ${money(o.preco)} (abre em nova aba)`}>
+                  aria-label={`Ver ${p.nome} ${naLoja(o.loja)} por ${money(o.preco)} (abre em nova aba)`}>
                   Ver na loja
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" /></svg>
                 </a>
@@ -119,6 +119,26 @@ export function HistoricoPreco({ produtoId }: { produtoId: number }) {
 
   if (!h || !geo) return null;
   const poucos = h.pontos.length < 7;
+  // Sem variação ainda (1 dia ou preço sempre igual): mostra um resumo em vez de um gráfico vazio.
+  if (h.pontos.length < 2 || geo.min === geo.max) {
+    const desde = fmtDia(geo.ps[0].dia);
+    return (
+      <section className="s-hist compacto" aria-label="Histórico de preço">
+        <div className="s-hist-head">
+          <div>
+            <h2>Histórico de preço</h2>
+            <p>Acompanhando desde {desde}</p>
+          </div>
+        </div>
+        <div className="s-hist-resumo">
+          <div><span>Preço hoje</span><strong className="s-num">{money(geo.ps[geo.ps.length - 1].preco)}</strong></div>
+          <p>{h.pontos.length < 2
+            ? 'Começamos a acompanhar este preço hoje. Volte nos próximos dias para ver se ele subiu ou caiu.'
+            : `O preço não mudou desde ${desde}.`}</p>
+        </div>
+      </section>
+    );
+  }
   const sel = hover != null ? geo.ps[hover] : geo.ps[geo.ps.length - 1];
 
   const mover = (clientX: number) => {

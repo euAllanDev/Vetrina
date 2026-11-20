@@ -23,6 +23,7 @@
   --s-head-h: 64px;
 
   min-height: 100vh;
+  overflow-x: clip;
   background: var(--s-bg);
   color: var(--s-ink);
   font: 400 15px/1.5 var(--s-sans);
@@ -464,6 +465,9 @@
 .s-oferta-btn svg { transition: transform 300ms var(--s-ease); }
 .s-oferta-btn:hover svg { transform: translate(2px, -2px); }
 .s-oferta-indisp { font-size: 13px; color: var(--s-ink-2); }
+.s-oferta-unica { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 18px; font-size: 14px; color: var(--s-ink); }
+.s-oferta-unica span.ok { color: var(--s-ok); font-weight: 600; }
+.s-oferta-unica p { flex-basis: 100%; margin: 4px 0 0; font-size: 12.5px; color: var(--s-ink-2); }
 .s-ofertas-nota { margin-top: 12px; font-size: 12.5px; color: var(--s-ink-2); }
 
 @container (max-width: 520px) {
@@ -489,6 +493,12 @@
 .s-hist-linha { stroke-dasharray: 2400; stroke-dashoffset: 2400; animation: s-desenha 1400ms var(--s-ease) 200ms forwards; }
 @keyframes s-desenha { to { stroke-dashoffset: 0; } }
 .s-hist-eixo { display: flex; justify-content: space-between; font-size: 12px; color: var(--s-ink-3); margin-top: 6px; }
+.s-hist-resumo { display: flex; align-items: center; gap: 24px; margin-top: 18px; flex-wrap: wrap; }
+.s-hist-resumo span { display: block; font-size: 12.5px; color: var(--s-ink-2); }
+.s-hist-resumo strong { font-size: 22px; font-weight: 600; }
+.s-hist-resumo p { flex: 1 1 240px; margin: 0; font-size: 14px; color: var(--s-ink-2); }
+.s-hist-num > div { min-width: 0; }
+.s-hist-num strong { white-space: nowrap; }
 .s-hist-aviso { margin-top: 10px; font-size: 13px; color: var(--s-ink-2); }
 
 /* lojas parceiras (home) */
@@ -515,7 +525,8 @@
   .s-buybar-info { flex: 1; min-width: 0; display: grid; }
   .s-buybar-info .nome { font-size: 13px; color: var(--s-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .s-buybar-info .s-preco { font-size: 15px; gap: 2px 8px; }
-  .s-buybar-info .s-preco .off { display: none; }
+  .s-buybar-info .s-preco .off, .s-buybar-info .s-preco .de { display: none; }
+  .s-buybar .s-btn { padding: 0 20px; }
   .s-buybar .s-btn { flex: none; }
 }
 
@@ -699,6 +710,10 @@
   .s-pdp-buy { flex-direction: column; }
   .s-pdp-buy .s-btn { flex: none; width: 100%; }
   .s-hist { margin-left: 8px; margin-right: 8px; }
+  .s-hist-num { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .s-hist-num strong { font-size: clamp(14px, 4.2vw, 18px); overflow: hidden; text-overflow: ellipsis; }
+  .s-hist-svg { height: 140px; }
+  .s-hist-dias button { padding: 0 11px; }
   .s-qty { align-self: flex-start; }
   .s-chips.cats { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 18px calc(-1 * var(--s-pad)) 0; padding: 0 var(--s-pad); }
   .s-chips.cats::-webkit-scrollbar { display: none; }

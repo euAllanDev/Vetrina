@@ -62,6 +62,12 @@ export const ehAfiliado = (p: Produto) => (p.ofertas?.length ?? 0) > 0;
 export const linkOferta = (o: Oferta) => `/api/ir/${o.id}`;
 export const freteGratis = (p: Produto) => ehAfiliado(p) && p.ofertas[0]?.frete === 0;
 
+/** "no Mercado Livre", "na Shopee"… (artigo certo para cada loja). */
+const MASCULINAS = ['mercado livre', 'aliexpress', 'magazine luiza', 'magalu', 'carrefour', 'extra', 'ponto'];
+export function naLoja(nome: string) {
+  return `${MASCULINAS.some((m) => nome.toLowerCase().startsWith(m)) ? 'no' : 'na'} ${nome}`;
+}
+
 /** "há 3 h", "há 2 dias"… */
 export function haQuanto(iso: string | null) {
   if (!iso) return null;
@@ -212,7 +218,7 @@ export function Card({ p, i = 0, onAbrir, onAdicionar }: { p: Produto; i?: numbe
         {extra && <div className={`s-card-flag ${p.disponivel ? 'warn' : ''}`}>{extra}</div>}
         <div className="s-card-name">{p.nome}</div>
         {p.categoriaNome && <div className="s-card-cat">{p.categoriaNome}</div>}
-        {afiliado && <span className="s-apartir">{lojas.length > 1 ? 'a partir de' : `na ${lojas[0].loja}`}</span>}
+        {afiliado && <span className="s-apartir">{lojas.length > 1 ? 'a partir de' : naLoja(lojas[0].loja)}</span>}
         <Preco p={p} />
         {afiliado && lojas.length > 1 && (
           <div className="s-card-lojas" title={lojas.map((o) => o.loja).join(', ')}>

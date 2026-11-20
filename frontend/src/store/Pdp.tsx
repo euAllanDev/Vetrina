@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { money } from '../lib/format';
 import { HistoricoPreco, Ofertas } from './Comparador';
-import { Card, MarcaLoja, Preco, Selos, Seta, Trilho, ehAfiliado, inicial, limiteDe, linkOferta, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
+import { Card, MarcaLoja, Preco, Selos, Seta, Trilho, ehAfiliado, haQuanto, naLoja, inicial, limiteDe, linkOferta, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
 
 interface Props { p: Produto; dados: Catalogo; naSacola: number; ir: (r: Rota) => void; onAbrir: Abrir; onAdicionar: Adicionar }
 
@@ -47,7 +47,7 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
 
   const paragrafos = (p.detalhes ?? '').split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
   const disp = afiliado
-    ? (melhor ? { t: nLojas > 1 ? `Disponível em ${nLojas} lojas` : `Disponível na ${melhor.loja}`, k: 'ok' } : { t: 'Indisponível no momento', k: 'off' })
+    ? (melhor ? { t: nLojas > 1 ? `Disponível em ${nLojas} lojas` : `Disponível ${naLoja(melhor.loja)}`, k: 'ok' } : { t: 'Indisponível no momento', k: 'off' })
     : !p.disponivel ? { t: 'Esgotado no momento', k: 'off' }
     : p.ultimasUnidades ? { t: p.ultimasUnidades === 1 ? 'Última unidade disponível' : `Restam só ${p.ultimasUnidades} unidades`, k: 'warn' }
     : { t: 'Em estoque', k: 'ok' };
@@ -95,7 +95,7 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
           <div className="s-pdp-sticky">
             {p.categoriaNome && <div className="s-pdp-cat">{p.categoriaNome}</div>}
             <h1 className="s-pdp-nome">{p.nome}</h1>
-            {afiliado && <span className="s-apartir lg">{nLojas > 1 ? 'Menor preço encontrado' : `Preço na ${p.ofertas[0].loja}`}</span>}
+            {afiliado && <span className="s-apartir lg">{nLojas > 1 ? 'Menor preço encontrado' : `Preço ${naLoja(p.ofertas[0].loja)}`}</span>}
             <Preco p={p} grande />
             {p.precoAnterior && p.precoAnterior > p.preco && (
               <p className="s-economia">Você economiza {money(p.precoAnterior - p.preco)}</p>
@@ -109,17 +109,25 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
                   {melhor ? (
                     <a className="s-btn xl" href={linkOferta(melhor)} target="_blank" rel="sponsored nofollow noopener noreferrer">
                       <MarcaLoja nome={melhor.loja} cor={melhor.cor} size={22} />
-                      Ver na {melhor.loja} · {money(melhor.preco)}
+                      Ver {naLoja(melhor.loja)} · {money(melhor.preco)}
                     </a>
                   ) : <button className="s-btn xl" disabled>Indisponível no momento</button>}
                   {nLojas > 1 && <button className="s-btn xl ghost" onClick={irParaOfertas}>Comparar {nLojas} lojas</button>}
                 </div>
+                {nLojas <= 1 && melhor && (
+                  <div className="s-oferta-unica">
+                    {melhor.nota != null && <span>★ {melhor.nota.toFixed(1).replace('.', ',')}{melhor.avaliacoes ? ` (${melhor.avaliacoes.toLocaleString('pt-BR')})` : ''}</span>}
+                    {melhor.frete === 0 ? <span className="ok">Frete grátis</span> : melhor.frete != null ? <span>+ {money(melhor.frete)} de frete</span> : null}
+                    {melhor.parcelamento && <span>{melhor.parcelamento}</span>}
+                    <p>{melhor.verificadoEm ? `Preço conferido ${haQuanto(melhor.verificadoEm)}. ` : ''}Preço, frete e estoque podem mudar: confira na loja antes de finalizar.</p>
+                  </div>
+                )}
                 <ul className="s-garantias">
                   <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>Compra feita direto no site da loja</li>
                   <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>Sem custo extra para você</li>
                   <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>Preços conferidos regularmente</li>
                 </ul>
-                <Ofertas p={p} onRef={(el) => { listaRef.current = el; }} />
+                {nLojas > 1 && <Ofertas p={p} onRef={(el) => { listaRef.current = el; }} />}
               </>
             ) : (
               <>
