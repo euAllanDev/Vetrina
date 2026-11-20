@@ -71,13 +71,21 @@ public final class AfiliadoDtos {
     public record CliquesParceiro(Long parceiroId, String nome, String cor, long cliques) {
     }
 
-    public record CliquesProduto(Long produtoId, String nome, long cliques) {
+    public record CliquesProduto(Long produtoId, String nome, String categoria, long cliques, long avisos) {
+    }
+
+    public record CliquesCategoria(String nome, long cliques, long produtos) {
+    }
+
+    /** Produto à venda que ninguém clicou no período: candidato a trocar por outro. */
+    public record ProdutoParado(Long produtoId, String nome, String categoria, BigDecimal preco, long avisos) {
     }
 
     public record CliquesDia(LocalDate dia, long cliques) {
     }
 
     public record RelatorioCliques(int dias, long total, List<CliquesDia> porDia, List<CliquesParceiro> porParceiro,
-                                   List<CliquesProduto> topProdutos) {
+                                   List<CliquesProduto> topProdutos, List<CliquesCategoria> porCategoria,
+                                   List<ProdutoParado> parados, long avisosAtivos) {
     }
 }

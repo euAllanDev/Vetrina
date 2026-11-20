@@ -498,7 +498,6 @@ function MenuMobile({ dados, ir, onFechar }: { dados: Catalogo; ir: (r: Rota) =>
             </a>
           ))}
         </nav>
-        <a className="s-menu-equipe" href="/">Área da equipe</a>
       </aside>
     </>
   );
@@ -728,7 +727,6 @@ function Rodape({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
       )}
       <div className="s-foot-bottom">
         <span>© {new Date().getFullYear()} {loja.razaoSocial ?? loja.nome}</span>
-        <a href="/">Área da equipe</a>
       </div>
     </footer>
   );

@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.Locale;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,13 +37,17 @@ public class CapturaService {
 
     public record CapturaRequest(String loja, String nome, BigDecimal preco, BigDecimal precoAnterior, Boolean freteGratis,
                                  BigDecimal nota, String urlProduto, String codigo, String linkAfiliado, Long categoriaId,
-                                 String detalhes) {
+                                 String detalhes, Long produtoId) {
+    }
+
+    /** Produto já cadastrado com nome parecido: talvez seja o mesmo, vendido em outra loja. */
+    public record Parecido(Long produtoId, String nome, BigDecimal preco, List<String> lojas, boolean jaTemEstaLoja) {
     }
 
     public record Existente(Long produtoId, Long ofertaId, String nome, BigDecimal preco, Long categoriaId, boolean temFoto, String link) {
     }
 
-    public record Verificacao(String loja, String parceiro, String codigo, Existente existente) {
+    public record Verificacao(String loja, String parceiro, String codigo, Existente existente, List<Parecido> parecidos) {
     }
 
     public record CapturaResponse(Long produtoId, Long ofertaId, String nome, boolean novo, BigDecimal preco,
@@ -129,7 +133,8 @@ public class CapturaService {
         Existente e = o == null ? null : new Existente(o.getProduto().getId(), o.getId(), o.getProduto().getDescricao(), o.getPreco(),
                 o.getProduto().getCategoria() == null ? null : o.getProduto().getCategoria().getId(),
                 o.getProduto().getImagemAtualizadaEm() != null, o.getUrl());
-        return new Verificacao(l.name(), p != null ? p.getNome() : l.nome, codigo, e);
+        List<Parecido> parecidos = e != null ? List.of() : parecidos(req.nome(), p);
+        return new Verificacao(l.name(), p != null ? p.getNome() : l.nome, codigo, e, parecidos);
     }
 
     @Transactional
@@ -152,8 +157,21 @@ public class CapturaService {
         BigDecimal precoAntes = novo ? null : o.getPreco();
         int bits = 0;
         Produto prod;
+        if (novo && req.produtoId() != null) {
+            // Mesmo produto vendido em outra loja: a oferta entra no produto que já existe (comparador).
+            Produto alvo = produtos.findById(req.produtoId()).orElseThrow(() -> new RecursoNaoEncontradoException("Produto", req.produtoId()));
+            Long parceiroId = parceiro.getId();
+            Oferta daMesmaLoja = ofertas.doProduto(alvo.getId()).stream()
+                    .filter(x -> x.getParceiro().getId().equals(parceiroId)).findFirst().orElse(null);
+            if (daMesmaLoja != null) {
+                o = daMesmaLoja;
+                novo = false;
+                precoAntes = o.getPreco();
+            }
+        }
         if (novo) {
-            prod = produtos.findFirstByCodigoIgnoreCase(l.prefixo + codigo.replace("P:", "")).orElse(null);
+            prod = req.produtoId() != null ? produtos.findById(req.produtoId()).orElseThrow()
+                    : produtos.findFirstByCodigoIgnoreCase(l.prefixo + codigo.replace("P:", "")).orElse(null);
             if (prod == null) prod = novoProduto(l, codigo, req, preco);
             o = new Oferta();
             o.setProduto(prod);
@@ -183,7 +201,7 @@ public class CapturaService {
         // Mantém o preço do cadastro em dia (a vitrine usa a melhor oferta, mas o painel mostra este).
         prod.setPrecoVenda(o.getPreco());
         prod.setPrecoAnterior(o.getPrecoAnterior());
-        if (req.categoriaId() != null) prod.setCategoria(categoria(req.categoriaId()));
+        if (req.categoriaId() != null && req.produtoId() == null) prod.setCategoria(categoria(req.categoriaId()));
         if (novo && req.detalhes() != null && !req.detalhes().isBlank() && prod.getDetalhes() == null) {
             prod.setDetalhes(corta(req.detalhes().trim(), 4000));
         }
@@ -241,6 +259,50 @@ public class CapturaService {
         return produtos.findFirstByCodigoIgnoreCase(l.prefixo + semP)
                 .flatMap(prod -> ofertas.doProduto(prod.getId()).stream().filter(o -> o.getParceiro().getId().equals(p.getId())).findFirst())
                 .orElse(null);
+    }
+
+    private static final Set<String> PALAVRAS_VAZIAS = Set.of("com", "para", "por", "sem", "das", "dos", "uma", "uns",
+            "the", "and", "new", "kit", "original", "promocao", "lancamento", "unico", "unica", "cor", "tamanho", "br");
+
+    static Set<String> palavras(String nome) {
+        if (nome == null) return Set.of();
+        String n = java.text.Normalizer.normalize(nome.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        Set<String> r = new LinkedHashSet<>();
+        for (String w : n.split("[^a-z0-9]+")) {
+            if (w.length() >= 3 && !PALAVRAS_VAZIAS.contains(w)) r.add(w);
+            else if (w.matches("\\d{2,}")) r.add(w); // números contam (128, 256gb…)
+            if (w.matches("\\d+[a-z]+")) r.add(w.replaceAll("[a-z]+$", "")); // 256gb também vale 256
+        }
+        return r;
+    }
+
+    /** Semelhança entre nomes: palavras em comum sobre o menor conjunto (0 a 1). */
+    static double semelhanca(Set<String> a, Set<String> b) {
+        if (a.isEmpty() || b.isEmpty()) return 0;
+        long comuns = a.stream().filter(b::contains).count();
+        return (double) comuns / Math.min(a.size(), b.size());
+    }
+
+    private List<Parecido> parecidos(String nome, Parceiro parceiro) {
+        Set<String> alvo = palavras(nome);
+        if (alvo.size() < 2) return List.of();
+        record Nota(Produto p, double s) {
+        }
+        List<Nota> melhores = produtos.daVitrine().stream()
+                .map(p -> new Nota(p, semelhanca(alvo, palavras(p.getDescricao()))))
+                .filter(n -> n.s() >= 0.5)
+                .sorted(Comparator.comparingDouble(Nota::s).reversed())
+                .limit(4).toList();
+        List<Parecido> r = new ArrayList<>();
+        for (Nota n : melhores) {
+            List<Oferta> os = ofertas.doProduto(n.p().getId());
+            List<String> lojas = os.stream().map(o -> o.getParceiro().getNome()).distinct().toList();
+            boolean mesma = parceiro != null && os.stream().anyMatch(o -> o.getParceiro().getId().equals(parceiro.getId()));
+            BigDecimal preco = os.stream().filter(o -> o.isAtivo() && o.isDisponivel()).map(Oferta::getPreco)
+                    .min(Comparator.naturalOrder()).orElse(n.p().getPrecoVenda());
+            r.add(new Parecido(n.p().getId(), n.p().getDescricao(), preco, lojas, mesma));
+        }
+        return r;
     }
 
     private static BigDecimal dinheiro(BigDecimal v) {

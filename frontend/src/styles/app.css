@@ -456,3 +456,11 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
   .captura-fav { grid-template-columns: 1fr; }
   .captura-prev { flex-direction: column; }
 }
+.captura-juntar { border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 12px; margin: 16px 0 0; display: grid; gap: 8px; }
+.captura-juntar legend { font-weight: 600; padding: 0 6px; font-size: 13px; }
+.captura-opcao { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: var(--r-sm, 8px); border: 1px solid transparent; cursor: pointer; }
+.captura-opcao:hover { background: var(--neutral-soft); }
+.captura-opcao.on { border-color: var(--primary); background: var(--success-soft); }
+.captura-opcao input { margin-top: 3px; }
+.captura-opcao span { display: grid; gap: 2px; }
+.captura-opcao small { color: var(--ink-3); font-size: 12px; }

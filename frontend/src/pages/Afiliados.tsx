@@ -37,6 +37,7 @@ export function Afiliados() {
         <Kpi label={`Cliques em ${dias} dias`} value={rel.data ? rel.data.total.toLocaleString('pt-BR') : '—'} icon="external" />
         <Kpi label="Lojas parceiras ativas" value={parceiros.data ? parceiros.data.filter((p) => p.ativo).length : '—'} icon="store" />
         <Kpi label="Ofertas cadastradas" value={parceiros.data ? totalOfertas : '—'} icon="link" />
+        <Kpi label="Pedidos de aviso de preço" value={rel.data ? rel.data.avisosAtivos.toLocaleString('pt-BR') : '—'} icon="bell" />
       </div>
 
       <Card title="Cliques por dia" actions={<Segmented value={dias} onChange={setDias} options={PERIODOS} label="Período" />}>
@@ -75,12 +76,55 @@ export function Afiliados() {
                   {rel.data.topProdutos.map((p, i) => (
                     <tr key={p.produtoId} className="clickable" onClick={() => navigate(`/produtos?id=${p.produtoId}`)}>
                       <td className="ink-2 num" style={{ width: 28 }}>{i + 1}</td>
-                      <td>{p.nome}</td>
+                      <td><div className="cell-title">{p.nome}</div><div className="cell-sub">{p.categoria}{p.avisos > 0 ? ` · ${p.avisos} ${p.avisos === 1 ? 'pedido' : 'pedidos'} de aviso` : ''}</div></td>
                       <td className="right num">{p.cliques}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            )}
+        </Card>
+      </div>
+
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <Card title="Por categoria">
+          {!rel.data ? <TableSkeleton rows={3} cols={2} /> : rel.data.porCategoria.length === 0
+            ? <Empty icon="package" title="Sem produtos ainda" />
+            : (() => {
+              const max = Math.max(1, ...rel.data!.porCategoria.map((c) => c.cliques));
+              return (
+                <table className="table">
+                  <tbody>
+                    {rel.data!.porCategoria.map((c) => (
+                      <tr key={c.nome}>
+                        <td><div className="cell-title">{c.nome}</div><div className="cell-sub">{c.produtos} {c.produtos === 1 ? 'produto' : 'produtos'} · {c.produtos ? (c.cliques / c.produtos).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) : 0} por produto</div></td>
+                        <td className="right num">{c.cliques}</td>
+                        <td style={{ width: '36%' }}><div className="meter"><span style={{ width: `${(c.cliques / max) * 100}%` }} /></div></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              );
+            })()}
+        </Card>
+        <Card title="Produtos parados" actions={rel.data && rel.data.parados.length > 0 ? <Badge tone="warning">{rel.data.parados.length} sem cliques</Badge> : undefined}>
+          {!rel.data ? <TableSkeleton rows={3} cols={2} /> : rel.data.parados.length === 0
+            ? <Empty icon="check" title="Todos tiveram cliques" text="Nenhum produto à venda ficou sem clique no período." />
+            : (
+              <>
+                <p className="muted" style={{ fontSize: 13, margin: '12px 16px 4px' }}>Ninguém clicou em “Ver na loja” nestes produtos no período. Vale trocar a foto, conferir o preço ou substituir.</p>
+                <table className="table">
+                  <tbody>
+                    {rel.data.parados.slice(0, 10).map((p) => (
+                      <tr key={p.produtoId} className="clickable" onClick={() => navigate(`/produtos?id=${p.produtoId}`)}>
+                        <td><div className="cell-title">{p.nome}</div><div className="cell-sub">{p.categoria}{p.avisos > 0 ? ` · ${p.avisos} ${p.avisos === 1 ? 'pedido' : 'pedidos'} de aviso` : ''}</div></td>
+                        <td className="right num">{money(p.preco)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {rel.data.parados.length > 10 && <p className="muted" style={{ fontSize: 12, margin: '8px 16px 12px' }}>e mais {rel.data.parados.length - 10}.</p>}
+              </>
             )}
         </Card>
       </div>
@@ -230,7 +274,7 @@ function AutomacaoMl({ query }: { query: URLSearchParams }) {
               <Field label="Seu link de afiliado" className="col-6" hint="O link curto que o Mercado Livre gera para você (meli.la).">
                 {(i) => <Input id={i} type="url" placeholder="https://meli.la/…" value={url} onChange={(e) => setUrl(e.target.value)} />}</Field>
               <Field label="Categoria na loja" className="col-6">{(i) => (
-                <Select id={i} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
+                <Select id={i} value={categoriaId} disabled={juntar != null} onChange={(e) => setCategoriaId(e.target.value)}>
                   <option value="">Sem categoria</option>
                   {cats.data?.filter((c) => c.ativo).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </Select>)}</Field>
@@ -284,6 +328,7 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
   const [anterior, setAnterior] = useState<number | ''>('');
   const [link, setLink] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
+  const [juntar, setJuntar] = useState<number | null>(null);
   const chave = captura ? `${captura.urlProduto}|${captura.preco}` : '';
 
   useEffect(() => {
@@ -294,8 +339,9 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
     setAnterior(captura.precoAnterior ?? '');
     setLink(captura.link);
     setCategoriaId('');
+    setJuntar(null);
     void ver.run(() => api.post<CapturaVerificacao>('/integracoes/captura/verificar',
-      { loja: captura.loja, urlProduto: captura.urlProduto ?? captura.link, codigo: captura.codigo ?? null })).then((r) => {
+      { loja: captura.loja, nome: captura.nome, urlProduto: captura.urlProduto ?? captura.link, codigo: captura.codigo ?? null })).then((r) => {
       if (!r) return;
       setV(r);
       if (r.existente) {
@@ -329,12 +375,13 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
       loja: captura.loja, nome: nome.trim(), preco: p, precoAnterior: anterior === '' ? null : anterior,
       freteGratis: captura.freteGratis ?? null, nota: captura.nota ?? null, urlProduto: captura.urlProduto ?? captura.link,
       codigo: captura.codigo ?? null, linkAfiliado: link.trim(), categoriaId: categoriaId ? Number(categoriaId) : null,
-      detalhes: captura.detalhes ?? null,
+      detalhes: captura.detalhes ?? null, produtoId: ex ? null : juntar,
     }));
     if (!r) return;
     let foto = r.temFoto;
     if (!foto) foto = await enviarFoto(r.produtoId);
-    if (r.novo) toast.ok(`${r.nome} publicado na loja${foto ? '' : ' (sem foto: envie em Produtos)'}`);
+    if (r.novo && juntar) toast.ok(`Oferta ${v?.parceiro ? `${daLoja(v.parceiro)} ` : ''}adicionada a ${r.nome}: agora ele compara lojas`);
+    else if (r.novo) toast.ok(`${r.nome} publicado na loja${foto ? '' : ' (sem foto: envie em Produtos)'}`);
     else if (r.precoAntes != null && r.precoAntes !== r.preco) toast.ok(`Preço atualizado: ${money(r.precoAntes)} → ${money(r.preco)}${r.baixou ? ' · selo "Baixou" ligado' : ''}`);
     else toast.ok(`Preço conferido: continua ${money(r.preco)}`);
     onSaved();
@@ -347,7 +394,7 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
       footer={<>
         <Button variant="ghost" onClick={onClose}>Cancelar</Button>
         <Button variant="primary" icon={ex ? 'refresh' : 'check'} loading={salvar.busy} disabled={!v || !nome.trim() || !p || !link.trim()} onClick={publicar}>
-          {ex ? (ex.preco !== p ? `Atualizar: ${money(ex.preco)} → ${money(p)}` : 'Confirmar preço') : 'Publicar na loja'}
+          {ex ? (ex.preco !== p ? `Atualizar: ${money(ex.preco)} → ${money(p)}` : 'Confirmar preço') : juntar ? 'Adicionar ao produto' : 'Publicar na loja'}
         </Button>
       </>}>
       {ver.error && <Alert>{ver.error}</Alert>}
@@ -356,11 +403,29 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
       <div className="captura-prev">
         {captura.imagem ? <img src={captura.imagem} alt="" referrerPolicy="no-referrer" /> : <div className="captura-sem-foto">sem foto</div>}
         <div className="form-grid" style={{ flex: 1 }}>
-          <Field label="Nome na loja" className="col-12">{(i) => <Input id={i} value={nome} maxLength={120} disabled={!!ex} onChange={(e) => setNome(e.target.value)} />}</Field>
+          <Field label="Nome na loja" className="col-12">{(i) => <Input id={i} value={nome} maxLength={120} disabled={!!ex || juntar != null} onChange={(e) => setNome(e.target.value)} />}</Field>
           <Field label="Preço" className="col-6">{(i) => <NumberInput id={i} value={preco} onChange={setPreco} />}</Field>
           <Field label="Preço antes (riscado)" className="col-6" hint="Deixe vazio se não houver desconto.">{(i) => <NumberInput id={i} value={anterior} onChange={setAnterior} />}</Field>
         </div>
       </div>
+      {!ex && v && v.parecidos.length > 0 && (
+        <fieldset className="captura-juntar">
+          <legend>Já tem algo parecido na loja. É o mesmo produto em outra loja?</legend>
+          <label className={`captura-opcao ${juntar == null ? 'on' : ''}`}>
+            <input type="radio" name="juntar" checked={juntar == null} onChange={() => setJuntar(null)} />
+            <span><strong>Não, é outro produto</strong><small>Publica como produto novo</small></span>
+          </label>
+          {v.parecidos.map((pp) => (
+            <label key={pp.produtoId} className={`captura-opcao ${juntar === pp.produtoId ? 'on' : ''}`}>
+              <input type="radio" name="juntar" checked={juntar === pp.produtoId} onChange={() => setJuntar(pp.produtoId)} />
+              <span>
+                <strong>Sim: {pp.nome}</strong>
+                <small>{money(pp.preco)} · {pp.lojas.join(', ') || 'sem ofertas'}{pp.jaTemEstaLoja ? ` · já tem oferta ${daLoja(v.parceiro)} (vai atualizar o preço)` : ` · ganha a oferta ${daLoja(v.parceiro)}`}</small>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
       <div className="form-grid" style={{ marginTop: 16 }}>
         <Field label="Seu link de afiliado" className="col-12" hint="É para onde o botão “Ver na loja” leva. Se preferir, cole o link curto (meli.la/…) que você gerou.">
           {(i) => <Input id={i} type="url" value={link} onChange={(e) => setLink(e.target.value)} />}</Field>
@@ -374,3 +439,6 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
     </Drawer>
   );
 }
+
+/** "do Mercado Livre", "da Shein". */
+const daLoja = (nome: string) => `${/^(mercado|magazine)/i.test(nome) ? 'do' : 'da'} ${nome}`;

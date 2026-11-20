@@ -28,6 +28,7 @@ public class AfiliadoService {
     private final HistoricoPrecoRepository historico;
     private final CliqueRepository cliques;
     private final ProdutoRepository produtos;
+    private final br.com.erp.alerta.AlertaPrecoRepository alertas;
     private final org.springframework.context.ApplicationEventPublisher eventos;
 
     /** ID de publisher na Awin (Conta → Detalhes). Com ele, links Awin são montados sozinhos. */
@@ -246,11 +247,43 @@ public class AfiliadoService {
             Parceiro p = ps.get((Long) r[0]);
             return new CliquesParceiro((Long) r[0], p == null ? "—" : p.getNome(), p == null ? null : p.getCor(), (Long) r[1]);
         }).sorted(Comparator.comparingLong(CliquesParceiro::cliques).reversed()).toList();
-        List<Object[]> topRaw = cliques.porProduto(desde).stream().limit(10).toList();
+        // Produtos da vitrine (com categoria numa consulta só), cliques e pedidos de aviso por produto.
+        Map<Long, Produto> vitrine = new LinkedHashMap<>();
+        produtos.daVitrine().forEach(p -> vitrine.put(p.getId(), p));
+        Map<Long, Long> cliquesProd = new HashMap<>();
+        List<Object[]> porProd = cliques.porProduto(desde);
+        porProd.forEach(r -> cliquesProd.put((Long) r[0], (Long) r[1]));
+        Map<Long, Long> avisos = new HashMap<>();
+        alertas.ativosPorProduto().forEach(r -> avisos.put((Long) r[0], (Long) r[1]));
+        Set<Long> comOferta = new HashSet<>();
+        ofertas.daVitrine().forEach(o -> comOferta.add(o.getProduto().getId()));
+        java.util.function.Function<Long, String> categoriaDe = id -> {
+            Produto p = vitrine.get(id);
+            return p == null || p.getCategoria() == null ? "Sem categoria" : p.getCategoria().getNome();
+        };
+
+        List<Object[]> topRaw = porProd.stream().limit(10).toList();
         Map<Long, String> nomes = new HashMap<>();
         produtos.findAllById(topRaw.stream().map(r -> (Long) r[0]).toList()).forEach(p -> nomes.put(p.getId(), p.getDescricao()));
         List<CliquesProduto> top = topRaw.stream()
-                .map(r -> new CliquesProduto((Long) r[0], nomes.getOrDefault((Long) r[0], "—"), (Long) r[1])).toList();
+                .map(r -> new CliquesProduto((Long) r[0], nomes.getOrDefault((Long) r[0], "—"), categoriaDe.apply((Long) r[0]),
+                        (Long) r[1], avisos.getOrDefault((Long) r[0], 0L))).toList();
+
+        Map<String, long[]> cat = new TreeMap<>();
+        vitrine.keySet().forEach(id -> cat.computeIfAbsent(categoriaDe.apply(id), k -> new long[2])[1]++);
+        cliquesProd.forEach((id, n) -> cat.computeIfAbsent(categoriaDe.apply(id), k -> new long[2])[0] += n);
+        List<CliquesCategoria> porCategoria = cat.entrySet().stream()
+                .filter(e -> e.getValue()[0] > 0 || e.getValue()[1] > 0)
+                .map(e -> new CliquesCategoria(e.getKey(), e.getValue()[0], e.getValue()[1]))
+                .sorted(Comparator.comparingLong(CliquesCategoria::cliques).reversed().thenComparing(CliquesCategoria::nome)).toList();
+
+        List<ProdutoParado> parados = vitrine.values().stream()
+                .filter(p -> comOferta.contains(p.getId()) && !cliquesProd.containsKey(p.getId()))
+                .sorted(Comparator.comparing(Produto::getCriadoEm))
+                .map(p -> new ProdutoParado(p.getId(), p.getDescricao(), categoriaDe.apply(p.getId()), p.getPrecoVenda(),
+                        avisos.getOrDefault(p.getId(), 0L)))
+                .toList();
+        long avisosAtivos = avisos.values().stream().mapToLong(Long::longValue).sum();
         Map<LocalDate, Long> porDiaMap = new HashMap<>();
         for (Object[] r : cliques.porDia(desde)) {
             LocalDate d = r[0] instanceof Date sd ? sd.toLocalDate() : LocalDate.parse(r[0].toString());
@@ -261,7 +294,7 @@ public class AfiliadoService {
             porDia.add(new CliquesDia(d, porDiaMap.getOrDefault(d, 0L)));
         }
         long total = porDia.stream().mapToLong(CliquesDia::cliques).sum();
-        return new RelatorioCliques(dias, total, porDia, porParceiro, top);
+        return new RelatorioCliques(dias, total, porDia, porParceiro, top, porCategoria, parados, avisosAtivos);
     }
 
     private static String vazioParaNulo(String s) {

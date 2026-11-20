@@ -19,4 +19,7 @@ public interface AlertaPrecoRepository extends JpaRepository<AlertaPreco, Long> 
     List<AlertaPreco> findByEndpoint(String endpoint);
 
     long countByAtivoTrue();
+
+    @Query("select a.produto.id, count(a) from AlertaPreco a where a.ativo = true group by a.produto.id")
+    List<Object[]> ativosPorProduto();
 }

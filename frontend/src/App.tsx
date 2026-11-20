@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { PAINEL } from './lib/painel';
 import { AuthProvider, useAuth } from './lib/auth';
 import { navigate, useRoute } from './lib/router';
 import { useHotkey } from './lib/hooks';
@@ -76,7 +77,13 @@ function Routes() {
 
 export function App() {
   // A loja é pública e independente do painel administrativo.
-  if (/^\/loja(\/|$)/.test(window.location.pathname)) return <Store />;
+  const caminho = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (/^\/loja(\/|$)/.test(caminho)) return <Store />;
+  // Qualquer outro endereço que não seja o do painel vai para a loja: visitante nunca cai na tela de login.
+  if (caminho !== PAINEL && !caminho.startsWith(`${PAINEL}/`)) {
+    window.location.replace('/loja');
+    return null;
+  }
   return (
     <AuthProvider>
       <ToastProvider>

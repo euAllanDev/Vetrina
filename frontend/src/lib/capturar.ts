@@ -1,3 +1,5 @@
+import { PAINEL } from './painel';
+
 /**
  * Botão de favorito "Enviar para a Vetrina".
  * Roda na página da loja (Mercado Livre, Shein…), dentro do navegador do dono: lê nome, preço, foto e links
@@ -33,11 +35,11 @@ if(d.imagem&&/ltwebstatic\.com/.test(d.imagem))d.imagem=d.imagem.replace(/_thumb
 if(d.imagem&&/mlstatic\.com/.test(d.imagem))d.imagem=d.imagem.replace(/D_Q_NP_(2X_)?/,'D_NQ_NP_2X_').replace(/-[A-Z]{1,2}(-[^\/.]*)?\.(webp|jpg|png)$/,'-F.jpg');
 d.link=location.href;
 var b=btoa(unescape(encodeURIComponent(JSON.stringify(d)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-window.open(O+'/#/afiliados?captura='+b,'_blank');
+window.open(O+'#/afiliados?captura='+b,'_blank');
 })();`;
 
 /** Endereço "javascript:" do favorito, apontando para este painel. */
-export function linkDoFavorito(origem = window.location.origin) {
+export function linkDoFavorito(origem = window.location.origin + PAINEL) {
   return `javascript:${encodeURIComponent(FONTE.replace('__ORIGEM__', origem))}`;
 }
 

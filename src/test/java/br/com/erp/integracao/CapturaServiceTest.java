@@ -38,4 +38,14 @@ class CapturaServiceTest {
         assertEquals("98765", CapturaService.codigoDe(Loja.KABUM, null, "https://www.kabum.com.br/produto/98765/mouse"));
         assertNull(CapturaService.codigoDe(Loja.SHEIN, null, "https://br.shein.com/"));
     }
+
+    @Test
+    void reconheceNomesParecidosEntreLojas() {
+        var ml = CapturaService.palavras("Apple iPhone 15 (256 GB) - Preto - Distribuidor Autorizado");
+        var kabum = CapturaService.palavras("iPhone 15 Apple 256GB Preto, Tela 6,1\"");
+        var outro = CapturaService.palavras("Copo Térmico Gigante 1,2L Inox Preto");
+        org.junit.jupiter.api.Assertions.assertTrue(CapturaService.semelhanca(ml, kabum) >= 0.5);
+        org.junit.jupiter.api.Assertions.assertTrue(CapturaService.semelhanca(ml, outro) < 0.5);
+        org.junit.jupiter.api.Assertions.assertTrue(CapturaService.palavras("Calça Feminina").contains("calca"));
+    }
 }
