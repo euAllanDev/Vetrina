@@ -44,10 +44,32 @@ public class CatalogoService {
     private final VendaRepository vendaRepository;
     private final OfertaRepository ofertaRepository;
 
-    @Transactional(readOnly = true)
+    private final org.springframework.transaction.PlatformTransactionManager txManager;
+
+    /** Catálogo pronto em memória: o banco fica longe do servidor e montar tudo leva segundos. */
+    private record Guardado(CatalogoResponse resposta, long versao, long em) {
+    }
+
+    private volatile Guardado guardado;
+
+    /**
+     * Devolve o catálogo guardado enquanto nada da vitrine mudou (e por no máximo 2 minutos, por causa dos
+     * selos que vencem com o tempo). Sem transação aqui: uma visita com o catálogo pronto nem abre conexão
+     * com o banco, que pode continuar dormindo.
+     */
     public CatalogoResponse catalogo() {
-        List<Produto> produtos = produtoRepository.findAll(
-                (root, query, cb) -> cb.isTrue(root.get("ativo")), Sort.by("descricao"));
+        Guardado g = guardado;
+        long versao = CatalogoInvalidador.VERSAO.get();
+        if (g != null && g.versao() == versao && System.currentTimeMillis() - g.em() < 120_000) return g.resposta();
+        var tx = new org.springframework.transaction.support.TransactionTemplate(txManager);
+        tx.setReadOnly(true);
+        CatalogoResponse r = tx.execute(s -> montar());
+        guardado = new Guardado(r, versao, System.currentTimeMillis());
+        return r;
+    }
+
+    private CatalogoResponse montar() {
+        List<Produto> produtos = produtoRepository.daVitrine();
 
         // "Novo": os 8 cadastrados mais recentemente. "Mais vendido": top 8 em quantidade nos últimos 90 dias.
         Set<Long> novos = produtos.stream()

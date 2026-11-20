@@ -8,6 +8,7 @@ import lombok.Setter;
 
 /** Dados do emitente usados na NF-e. O sistema trabalha com uma empresa (registro único). */
 @Entity
+@jakarta.persistence.EntityListeners(br.com.erp.catalogo.CatalogoInvalidador.class)
 @Table(name = "empresa")
 @Getter
 @Setter

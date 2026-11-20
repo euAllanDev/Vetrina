@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Loja: favoritos com coracao, pagina Meus favoritos e aviso de quanto baixou desde que salvou
+  echo Catalogo rapido: uma consulta para produtos e categorias e catalogo guardado em memoria ate algo mudar
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM

@@ -11,6 +11,10 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long>, JpaSpec
 
     boolean existsByCodigoIgnoreCase(String codigo);
 
+    /** Produtos ativos da vitrine, já com a categoria (uma consulta só, em vez de uma por categoria). */
+    @org.springframework.data.jpa.repository.Query("select p from Produto p left join fetch p.categoria where p.ativo = true order by p.descricao")
+    java.util.List<Produto> daVitrine();
+
     java.util.Optional<Produto> findFirstByCodigoIgnoreCase(String codigo);
 
     boolean existsByCategoriaId(Long categoriaId);

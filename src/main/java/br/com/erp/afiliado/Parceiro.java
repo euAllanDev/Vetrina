@@ -7,6 +7,7 @@ import lombok.Setter;
 
 /** Loja parceira (onde o cliente finaliza a compra pelo link de afiliado). */
 @Entity
+@jakarta.persistence.EntityListeners(br.com.erp.catalogo.CatalogoInvalidador.class)
 @Table(name = "parceiros")
 @Getter
 @Setter

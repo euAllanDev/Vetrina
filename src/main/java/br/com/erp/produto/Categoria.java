@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
+@jakarta.persistence.EntityListeners(br.com.erp.catalogo.CatalogoInvalidador.class)
 @Table(name = "categorias")
 @Getter
 @Setter

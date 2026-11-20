@@ -14,7 +14,7 @@ export const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '
 
 // O catálogo fica em memória por alguns minutos para não bater no servidor a cada visita.
 let cache = { em: 0, dados: null };
-export async function catalogo(limiteMs = 3500) {
+export async function catalogo(limiteMs = 5000) {
   if (cache.dados && Date.now() - cache.em < 5 * 60_000) return cache.dados;
   try {
     const r = await fetch(`${API}/api/catalogo`, { signal: AbortSignal.timeout(limiteMs) });

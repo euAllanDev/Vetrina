@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
+@jakarta.persistence.EntityListeners(br.com.erp.catalogo.CatalogoInvalidador.class)
 @Table(name = "produtos")
 @Getter
 @Setter

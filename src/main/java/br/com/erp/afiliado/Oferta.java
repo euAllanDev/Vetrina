@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 
 /** Um produto à venda numa loja parceira, com o link de afiliado e o último preço conferido. */
 @Entity
+@jakarta.persistence.EntityListeners(br.com.erp.catalogo.CatalogoInvalidador.class)
 @Table(name = "ofertas", indexes = {
         @Index(name = "ix_oferta_produto", columnList = "produto_id"),
         @Index(name = "ix_oferta_parceiro", columnList = "parceiro_id")
