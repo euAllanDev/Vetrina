@@ -341,10 +341,13 @@ function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu
 
         <div className="s-head-tools">
           {dados && <Busca dados={dados} ir={ir} abrir={abrir} inicial={rota.q ?? ''} />}
-          <button ref={bagRef} className="s-icon-btn s-bag-btn" aria-label={`Sacola, ${qtd} ${qtd === 1 ? 'item' : 'itens'}`} onClick={onSacola}>
-            <Icon name="bag" size={22} />
-            {qtd > 0 && <span key={bump} className={`s-count ${bump ? 'bump' : ''}`}>{qtd}</span>}
-          </button>
+          {/* Sacola só faz sentido quando a loja vende produtos próprios; no comparador tudo é comprado no parceiro. */}
+          {dados?.produtos.some((p) => !ehAfiliado(p)) && (
+            <button ref={bagRef} className="s-icon-btn s-bag-btn" aria-label={`Sacola, ${qtd} ${qtd === 1 ? 'item' : 'itens'}`} onClick={onSacola}>
+              <Icon name="bag" size={22} />
+              {qtd > 0 && <span key={bump} className={`s-count ${bump ? 'bump' : ''}`}>{qtd}</span>}
+            </button>
+          )}
         </div>
       </div>
 
