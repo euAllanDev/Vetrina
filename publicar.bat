@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Loja: esconde a sacola quando todos os produtos sao de afiliados
+  echo Loja: links curtos de produto, previa no WhatsApp, SEO com sitemap, robots e dados de preco, e botoes de compartilhar
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM

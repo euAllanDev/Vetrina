@@ -28,6 +28,9 @@ export interface Rota { p?: number; c?: number; q?: string; l?: number; v?: 'ofe
 export function lerRota(): Rota {
   const s = new URLSearchParams(window.location.search);
   const r: Rota = {};
+  // Produto tem link curto e fixo (/loja/p/37), bom para compartilhar e para o Google; ?p=37 continua valendo.
+  const m = window.location.pathname.match(/^\/loja\/p\/(\d+)/);
+  if (m) r.p = Number(m[1]);
   if (s.get('p')) r.p = Number(s.get('p'));
   if (s.get('c')) r.c = Number(s.get('c'));
   if (s.get('q')) r.q = s.get('q')!;
@@ -38,6 +41,7 @@ export function lerRota(): Rota {
 }
 
 export function urlDe(r: Rota) {
+  if (r.p && !r.c && !r.q && !r.l && !r.v) return `/loja/p/${r.p}`;
   const s = new URLSearchParams();
   if (r.p) s.set('p', String(r.p));
   if (r.c) s.set('c', String(r.c));
@@ -266,5 +270,91 @@ export function Trilho({ titulo, sub, acao, children }: { titulo: string; sub?: 
       </div>
       <div className="s-trilho-track" ref={box} onScroll={medir}>{children}</div>
     </section>
+  );
+}
+
+/* ============================== compartilhar ============================== */
+const abs = (url: string) => new URL(url, window.location.origin).href;
+
+async function copiarTexto(t: string) {
+  try { await navigator.clipboard.writeText(t); return true; } catch { /* sem permissão: tenta o jeito antigo */ }
+  const ta = document.createElement('textarea');
+  ta.value = t; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.append(ta); ta.select();
+  const ok = document.execCommand('copy');
+  ta.remove();
+  return ok;
+}
+
+const IcoMsg = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.3A8.4 8.4 0 1 1 21 11.5z" /></svg>
+);
+const IcoLink = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
+);
+const IcoShare = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m0 0L8 7m4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" /></svg>
+);
+
+function useCopiado(): [string | null, (k: string, t: string) => void] {
+  const [k, setK] = useState<string | null>(null);
+  const t = useRef<number>(0);
+  return [k, (chave, texto) => {
+    void copiarTexto(texto).then((ok) => {
+      if (!ok) return;
+      setK(chave);
+      window.clearTimeout(t.current);
+      t.current = window.setTimeout(() => setK(null), 2200);
+    });
+  }];
+}
+
+/** Botões de compartilhar um produto: WhatsApp, menu nativo do celular e copiar link. */
+export function Compartilhar({ p, loja }: { p: Produto; loja: string }) {
+  const [copiado, copiar] = useCopiado();
+  const url = abs(urlDe({ p: p.id }));
+  const texto = `${p.nome} por ${money(p.preco)}${emOferta(p) && p.desconto ? ` (${p.desconto}% off)` : ''} na ${loja}`;
+  const nativo = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  return (
+    <div className="s-share" role="group" aria-label="Compartilhar">
+      <a className="s-share-btn" href={`https://wa.me/?text=${encodeURIComponent(`${texto}\n${url}`)}`} target="_blank" rel="noopener noreferrer">
+        <IcoMsg />WhatsApp
+      </a>
+      {nativo && (
+        <button className="s-share-btn" onClick={() => { navigator.share({ title: p.nome, text: texto, url }).catch(() => { /* cancelado */ }); }}>
+          <IcoShare />Compartilhar
+        </button>
+      )}
+      <button className="s-share-btn" onClick={() => copiar('link', url)} aria-live="polite">
+        <IcoLink />{copiado === 'link' ? 'Link copiado' : 'Copiar link'}
+      </button>
+    </div>
+  );
+}
+
+/** Texto pronto para grupo de ofertas: até 10 produtos, com preço de/por e link de cada um. */
+export function textoDaLista(titulo: string, loja: string, produtos: Produto[], rota: Rota) {
+  const itens = produtos.filter((p) => p.disponivel).slice(0, 10).map((p) => {
+    const de = emOferta(p) ? `De ~${money(p.precoAnterior)}~ por ` : '';
+    const off = emOferta(p) && p.desconto ? ` (-${p.desconto}%)` : '';
+    return `*${p.nome}*\n${de}*${money(p.preco)}*${off}\n${abs(urlDe({ p: p.id }))}`;
+  });
+  return `🔥 *${titulo} na ${loja}*\n\n${itens.join('\n\n')}\n\nVeja tudo: ${abs(urlDe(rota))}`;
+}
+
+/** Barra para mandar a lista inteira num grupo: abre o WhatsApp com o texto pronto ou copia o texto. */
+export function CompartilharLista({ titulo, loja, produtos, rota }: { titulo: string; loja: string; produtos: Produto[]; rota: Rota }) {
+  const [copiado, copiar] = useCopiado();
+  if (!produtos.some((p) => p.disponivel)) return null;
+  const texto = textoDaLista(titulo, loja, produtos, rota);
+  return (
+    <div className="s-share lista" role="group" aria-label="Compartilhar esta lista">
+      <a className="s-share-btn" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">
+        <IcoMsg />Mandar no WhatsApp
+      </a>
+      <button className="s-share-btn" onClick={() => copiar('texto', texto)}>
+        <IcoLink />{copiado === 'texto' ? 'Texto copiado' : 'Copiar texto da lista'}
+      </button>
+    </div>
   );
 }

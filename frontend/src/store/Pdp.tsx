@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { money } from '../lib/format';
 import { HistoricoPreco, Ofertas } from './Comparador';
-import { Card, MarcaLoja, Preco, Selos, Seta, Trilho, ehAfiliado, haQuanto, naLoja, inicial, limiteDe, linkOferta, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
+import { Card, Compartilhar, MarcaLoja, Preco, Selos, Seta, Trilho, ehAfiliado, haQuanto, naLoja, inicial, limiteDe, linkOferta, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
 
 interface Props { p: Produto; dados: Catalogo; naSacola: number; ir: (r: Rota) => void; onAbrir: Abrir; onAdicionar: Adicionar }
 
@@ -127,6 +127,7 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
                   <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>Sem custo extra para você</li>
                   <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>Preços conferidos regularmente</li>
                 </ul>
+                <Compartilhar p={p} loja={dados.loja.nome} />
                 {nLojas > 1 && <Ofertas p={p} onRef={(el) => { listaRef.current = el; }} />}
               </>
             ) : (
@@ -151,6 +152,7 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
                   <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>Pix, cartão ou dinheiro</li>
                   <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>Confirmação pelo telefone</li>
                 </ul>
+                <Compartilhar p={p} loja={dados.loja.nome} />
               </>
             )}
 

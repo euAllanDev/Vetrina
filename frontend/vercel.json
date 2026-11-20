@@ -1,5 +1,9 @@
 {
   "rewrites": [
+    { "source": "/robots.txt", "destination": "/api/robots" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/loja/p/:id", "destination": "/api/seo?p=:id" },
+    { "source": "/loja", "destination": "/api/seo" },
     { "source": "/api/:path*", "destination": "https://vetrina-42b1.onrender.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

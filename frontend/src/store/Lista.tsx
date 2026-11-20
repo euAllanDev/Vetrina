@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { money } from '../lib/format';
-import { Card, MarcaLoja, baixou, ehAfiliado, emOferta, freteGratis, transicao, urlDe, type Abrir, type Adicionar, type Catalogo, type Rota } from './shared';
+import { Card, CompartilharLista, MarcaLoja, baixou, ehAfiliado, emOferta, freteGratis, transicao, urlDe, type Abrir, type Adicionar, type Catalogo, type Rota } from './shared';
 
 type Ordem = 'relevancia' | 'menor' | 'maior' | 'az' | 'desconto';
 const ORDENS: { v: Ordem; t: string }[] = [
@@ -99,6 +99,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
           {lista.length} {lista.length === 1 ? 'produto' : 'produtos'}
           {precos.length > 1 && ` · de ${money(Math.min(...precos))} a ${money(Math.max(...precos))}`}
         </p>
+        {!termo && <CompartilharLista titulo={rota.v === 'ofertas' ? 'Ofertas de hoje' : titulo} loja={dados.loja.nome} produtos={lista} rota={rota} />}
         {!termo && !lojaRota && (
           <div className="s-chips cats" role="list">
             <a role="listitem" href={urlDe({ v: 'todos' })} className="s-chip" aria-current={!cat && rota.v !== 'ofertas' && rota.v !== 'novidades'}

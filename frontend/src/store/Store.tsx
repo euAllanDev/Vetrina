@@ -146,6 +146,17 @@ export function Store() {
     const lj = dados?.parceiros?.find((x) => x.id === rota.l);
     document.title = produto ? `${produto.nome} — ${nome}` : lj ? `${lj.nome} — ${nome}` : cat ? `${cat.nome} — ${nome}` : rota.q ? `Busca: ${rota.q} — ${nome}` : nome;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#ffffff');
+    // Mantém descrição e endereço canônico em dia ao navegar (a primeira carga já vem pronta do servidor).
+    if (!dados) return;
+    const desc = produto
+      ? `${produto.nome} por ${money(produto.preco)}${emOferta(produto) && produto.desconto ? ` (${produto.desconto}% off)` : ''}. Compare preços e veja o histórico na ${nome}.`
+      : `Compare preços, veja o histórico e encontre as melhores ofertas na ${nome}.`;
+    let m = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (!m) { m = document.createElement('meta'); m.name = 'description'; document.head.append(m); }
+    m.content = desc;
+    let c = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!c) { c = document.createElement('link'); c.rel = 'canonical'; document.head.append(c); }
+    c.href = new URL(urlDe(rota.p ? { p: rota.p } : rota), window.location.origin).href;
   }, [dados, rota, produto]);
 
   // Trava a rolagem do fundo com sacola ou menu abertos; Esc fecha.

@@ -76,7 +76,7 @@ function Routes() {
 
 export function App() {
   // A loja é pública e independente do painel administrativo.
-  if (window.location.pathname.replace(/\/+$/, '') === '/loja') return <Store />;
+  if (/^\/loja(\/|$)/.test(window.location.pathname)) return <Store />;
   return (
     <AuthProvider>
       <ToastProvider>

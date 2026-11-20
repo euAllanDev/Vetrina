@@ -732,3 +732,15 @@
   .s-letreiro-track { animation: none !important; }
   .s-toast { animation: s-toast-in 1ms both, s-toast-out 1ms 4s forwards !important; }
 }
+
+/* ============================== compartilhar ============================== */
+.s-share { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.s-share.lista { margin-top: 16px; }
+.s-share-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--s-line); background: #fff; color: var(--s-ink); font: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: background .15s, border-color .15s, transform .1s;
+}
+.s-share-btn:hover { background: var(--s-soft); border-color: var(--s-ink-3); }
+.s-share-btn:active { transform: scale(0.97); }
+.s-share-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
