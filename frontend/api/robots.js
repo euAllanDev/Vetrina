@@ -13,6 +13,7 @@ export default function handler(req, res) {
     'Allow: /api/produtos/',
     'Allow: /api/img',
     'Allow: /sitemap.xml',
+    'Allow: /google0adadbad9117cc16.html',
     'Disallow: /',
     '',
     `Sitemap: ${o}/sitemap.xml`,
