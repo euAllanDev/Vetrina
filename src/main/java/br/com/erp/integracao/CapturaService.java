@@ -34,6 +34,7 @@ public class CapturaService {
     private final ProdutoRepository produtos;
     private final CategoriaRepository categorias;
     private final org.springframework.context.ApplicationEventPublisher eventos;
+    private final br.com.erp.afiliado.AfiliadoService afiliados;
 
     public record CapturaRequest(String loja, String nome, BigDecimal preco, BigDecimal precoAnterior, Boolean freteGratis,
                                  BigDecimal nota, String urlProduto, String codigo, String linkAfiliado, Long categoriaId,
@@ -47,7 +48,8 @@ public class CapturaService {
     public record Existente(Long produtoId, Long ofertaId, String nome, BigDecimal preco, Long categoriaId, boolean temFoto, String link) {
     }
 
-    public record Verificacao(String loja, String parceiro, String codigo, Existente existente, List<Parecido> parecidos) {
+    public record Verificacao(String loja, String parceiro, String codigo, Existente existente, List<Parecido> parecidos,
+                              boolean linkAutomatico, String avisoLink) {
     }
 
     public record CapturaResponse(Long produtoId, Long ofertaId, String nome, boolean novo, BigDecimal preco,
@@ -134,7 +136,15 @@ public class CapturaService {
                 o.getProduto().getCategoria() == null ? null : o.getProduto().getCategoria().getId(),
                 o.getProduto().getImagemAtualizadaEm() != null, o.getUrl());
         List<Parecido> parecidos = e != null ? List.of() : parecidos(req.nome(), p);
-        return new Verificacao(l.name(), p != null ? p.getNome() : l.nome, codigo, e, parecidos);
+        boolean auto = false;
+        String aviso = null;
+        if (l.rede == RedeAfiliado.AWIN) {
+            auto = afiliados.linkAwin(p, req.urlProduto()).isPresent();
+            if (!auto) aviso = afiliados.awinPublisher() == null
+                    ? "Configure seu ID de publisher da Awin em Afiliados para o link de comissão ser montado sozinho."
+                    : "Cadastre o ID da " + l.nome + " na Awin (Afiliados → loja → ID do anunciante) para o link ser montado sozinho.";
+        }
+        return new Verificacao(l.name(), p != null ? p.getNome() : l.nome, codigo, e, parecidos, auto, aviso);
     }
 
     @Transactional
@@ -146,10 +156,15 @@ public class CapturaService {
         String codigo = codigoDe(l, req.codigo(), req.urlProduto());
         if (codigo == null) throw new NegocioException("Não reconheci o código do produto nesse endereço. Abra a página do produto e capture de novo.");
         String link = req.linkAfiliado() == null ? "" : req.linkAfiliado().trim();
-        validarLink(link);
-
         Parceiro parceiro = parceiroExistente(l);
         if (parceiro == null) parceiro = criarParceiro(l);
+        if (l.rede == RedeAfiliado.AWIN && !link.contains("awin1.com")) {
+            // Página da loja não tem link de comissão: monta o link da Awin a partir do endereço do produto.
+            String base = req.urlProduto() != null && !req.urlProduto().isBlank() ? req.urlProduto() : link;
+            link = afiliados.linkAwin(parceiro, base).orElseThrow(() -> new NegocioException(
+                    "Para a " + l.nome + ", configure a Awin em Afiliados (seu ID de publisher e o ID da loja na Awin) ou cole um link da Awin."));
+        }
+        validarLink(link);
         LocalDateTime agora = LocalDateTime.now();
 
         Oferta o = existente(l, parceiro, codigo);

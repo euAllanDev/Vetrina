@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Comparador: juntar a mesma oferta de outra loja; relatorio por categoria e produtos parados; painel em endereco proprio e raiz abre a loja
+  echo Awin: ID de publisher pelo painel, link de comissao montado na captura e leitura dos dados estruturados do produto
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM

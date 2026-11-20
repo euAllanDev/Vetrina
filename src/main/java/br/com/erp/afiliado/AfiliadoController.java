@@ -106,7 +106,22 @@ public class AfiliadoController {
 
     // ---------- relatório ----------
 
-    @GetMapping("/relatorios/cliques")
+    public record AwinConfig(String publisherId) {
+    }
+
+    @GetMapping("/afiliados/awin")
+    @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
+    public AwinConfig awin() {
+        return new AwinConfig(service.awinPublisher());
+    }
+
+    @PutMapping("/afiliados/awin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AwinConfig salvarAwin(@RequestBody AwinConfig req) {
+        return new AwinConfig(service.salvarAwinPublisher(req.publisherId()));
+    }
+
+        @GetMapping("/relatorios/cliques")
     @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
     public RelatorioCliques relatorio(@RequestParam(defaultValue = "30") int dias) {
         return service.relatorio(Math.max(1, Math.min(dias, 365)));

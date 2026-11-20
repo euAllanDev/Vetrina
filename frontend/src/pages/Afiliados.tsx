@@ -30,6 +30,8 @@ export function Afiliados() {
 
       <CapturaFavorito />
       <div style={{ height: 16 }} />
+      <AwinConfig parceiros={parceiros.data ?? null} />
+      <div style={{ height: 16 }} />
       <AutomacaoMl query={query} />
       <CapturaDrawer captura={lerCaptura(query.get('captura'))} onClose={() => navigate('/afiliados')} onSaved={parceiros.reload} />
 
@@ -344,6 +346,8 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
       { loja: captura.loja, nome: captura.nome, urlProduto: captura.urlProduto ?? captura.link, codigo: captura.codigo ?? null })).then((r) => {
       if (!r) return;
       setV(r);
+      // Awin: o link de comissão é montado pelo servidor a partir do endereço do produto.
+      if (r.linkAutomatico && !/awin1\.com/.test(captura.link)) setLink('');
       if (r.existente) {
         if (r.existente.link) setLink(r.existente.link);
         if (r.existente.categoriaId) setCategoriaId(String(r.existente.categoriaId));
@@ -393,7 +397,7 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
       sub={v ? `${v.parceiro}${v.codigo ? ` · ${v.codigo}` : ''}` : 'Conferindo…'}
       footer={<>
         <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-        <Button variant="primary" icon={ex ? 'refresh' : 'check'} loading={salvar.busy} disabled={!v || !nome.trim() || !p || !link.trim()} onClick={publicar}>
+        <Button variant="primary" icon={ex ? 'refresh' : 'check'} loading={salvar.busy} disabled={!v || !nome.trim() || !p || (!link.trim() && !v.linkAutomatico)} onClick={publicar}>
           {ex ? (ex.preco !== p ? `Atualizar: ${money(ex.preco)} → ${money(p)}` : 'Confirmar preço') : juntar ? 'Adicionar ao produto' : 'Publicar na loja'}
         </Button>
       </>}>
@@ -427,7 +431,10 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
         </fieldset>
       )}
       <div className="form-grid" style={{ marginTop: 16 }}>
-        <Field label="Seu link de afiliado" className="col-12" hint="É para onde o botão “Ver na loja” leva. Se preferir, cole o link curto (meli.la/…) que você gerou.">
+        {v?.avisoLink && <div className="col-12"><Alert tone="warning">{v.avisoLink}</Alert></div>}
+        <Field label="Seu link de afiliado" className="col-12" hint={v?.linkAutomatico && !link.trim()
+          ? 'Pode deixar vazio: o link da Awin com a sua comissão é montado automaticamente.'
+          : 'É para onde o botão “Ver na loja” leva. Se preferir, cole o link curto (meli.la/…) que você gerou.'}>
           {(i) => <Input id={i} type="url" value={link} onChange={(e) => setLink(e.target.value)} />}</Field>
         <Field label="Categoria na loja" className="col-12">{(i) => (
           <Select id={i} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
@@ -442,3 +449,50 @@ function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | nul
 
 /** "do Mercado Livre", "da Shein". */
 const daLoja = (nome: string) => `${/^(mercado|magazine)/i.test(nome) ? 'do' : 'da'} ${nome}`;
+
+/* ============================== Awin ============================== */
+function AwinConfig({ parceiros }: { parceiros: Parceiro[] | null }) {
+  const toast = useToast();
+  const cfg = useAsync(() => api.get<{ publisherId: string | null }>('/afiliados/awin'), []);
+  const act = useAction();
+  const [id, setId] = useState('');
+  useEffect(() => { setId(cfg.data?.publisherId ?? ''); }, [cfg.data]);
+  const lojas = (parceiros ?? []).filter((p) => p.rede === 'AWIN');
+  const pronto = !!cfg.data?.publisherId && lojas.some((p) => p.awinMerchantId);
+
+  const salvar = async () => {
+    const r = await act.run(() => api.put<{ publisherId: string | null }>('/afiliados/awin', { publisherId: id.trim() }));
+    if (r) { toast.ok(r.publisherId ? 'ID de publisher da Awin salvo' : 'ID de publisher removido'); cfg.reload(); }
+  };
+
+  return (
+    <Card title="Awin (KaBuM! e outras lojas da rede)" actions={cfg.data ? <Badge tone={pronto ? 'success' : 'warning'}>{pronto ? 'Links automáticos ligados' : 'Falta configurar'}</Badge> : undefined}>
+      <div className="card-body">
+        <p className="muted" style={{ margin: '0 0 12px', fontSize: 13 }}>
+          Com o seu ID de publisher e o ID de cada loja na Awin, o link com a sua comissão é montado sozinho: é só capturar a página do produto na loja.
+        </p>
+        {act.error && <div style={{ marginBottom: 12 }}><Alert>{act.error}</Alert></div>}
+        <div className="row" style={{ gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <Field label="Seu ID de publisher na Awin" hint="Na Awin: canto superior esquerdo, ao lado do nome da conta (só números).">
+            {(i) => <Input id={i} inputMode="numeric" value={id} placeholder="ex.: 1234567" onChange={(e) => setId(e.target.value.replace(/\D/g, ''))} style={{ width: 220 }} />}
+          </Field>
+          <Button variant="primary" loading={act.busy} disabled={!cfg.data || id === (cfg.data.publisherId ?? '')} onClick={salvar}>Salvar</Button>
+        </div>
+        <table className="table" style={{ marginTop: 12 }}>
+          <tbody>
+            {lojas.length === 0 && <tr><td className="muted">Nenhuma loja da rede Awin cadastrada.</td></tr>}
+            {lojas.map((p) => (
+              <tr key={p.id} className="clickable" onClick={() => navigate(`/afiliados?loja=${p.id}`)}>
+                <td><div className="row" style={{ gap: 10 }}><MarcaParceiro nome={p.nome} cor={p.cor} />{p.nome}</div></td>
+                <td>{p.awinMerchantId
+                  ? <span>ID na Awin: <span className="mono">{p.awinMerchantId}</span></span>
+                  : <span className="ink-2">Falta o ID da loja na Awin (awinmid)</span>}</td>
+                <td className="right"><Button size="sm" variant="ghost" iconRight="chevronRight">{p.awinMerchantId ? 'Editar' : 'Configurar'}</Button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}

@@ -134,6 +134,7 @@ export interface CapturaVerificacao {
   loja: string; parceiro: string; codigo: string | null;
   existente: { produtoId: number; ofertaId: number; nome: string; preco: number; categoriaId: number | null; temFoto: boolean; link: string | null } | null;
   parecidos: { produtoId: number; nome: string; preco: number; lojas: string[]; jaTemEstaLoja: boolean }[];
+  linkAutomatico: boolean; avisoLink: string | null;
 }
 export interface CapturaResultado { produtoId: number; ofertaId: number; nome: string; novo: boolean; preco: number; precoAntes: number | null; baixou: boolean; temFoto: boolean }
 export interface ImportacaoMl { produtoId: number; ofertaId: number; nome: string; preco: number; precoAnterior: number | null; foto: boolean }

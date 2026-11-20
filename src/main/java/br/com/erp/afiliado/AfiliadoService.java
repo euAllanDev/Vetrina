@@ -28,6 +28,7 @@ public class AfiliadoService {
     private final HistoricoPrecoRepository historico;
     private final CliqueRepository cliques;
     private final ProdutoRepository produtos;
+    private final br.com.erp.alerta.ConfiguracaoRepository configs;
     private final br.com.erp.alerta.AlertaPrecoRepository alertas;
     private final org.springframework.context.ApplicationEventPublisher eventos;
 
@@ -155,20 +156,51 @@ public class AfiliadoService {
         o.setVerificadoEm(LocalDateTime.now());
     }
 
+    // ---------------- Awin ----------------
+
+    private static final String CHAVE_AWIN = "awin.publisher";
+
+    /** Seu ID de publisher na Awin: o salvo pelo painel ou, se não houver, o da variável AWIN_PUBLISHER_ID. */
+    @Transactional(readOnly = true)
+    public String awinPublisher() {
+        return configs.findById(CHAVE_AWIN).map(br.com.erp.alerta.Configuracao::getValor)
+                .filter(v -> !v.isBlank())
+                .orElse(awinPublisherId == null || awinPublisherId.isBlank() ? null : awinPublisherId.trim());
+    }
+
+    @Transactional
+    public String salvarAwinPublisher(String id) {
+        String v = id == null ? "" : id.trim();
+        if (!v.isEmpty() && !v.matches("\\d{3,12}")) throw new NegocioException("O ID de publisher da Awin tem só números (ex.: 1234567)");
+        if (v.isEmpty()) configs.deleteById(CHAVE_AWIN);
+        else configs.save(new br.com.erp.alerta.Configuracao(CHAVE_AWIN, v));
+        return v.isEmpty() ? null : v;
+    }
+
+    /**
+     * Link de afiliado da Awin para um produto (deep link): leva ao produto na loja e registra a comissão.
+     * Vazio se a loja não for da Awin ou faltar o ID de publisher / ID do anunciante.
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> linkAwin(Parceiro p, String urlProduto) {
+        String pub = awinPublisher();
+        if (p == null || p.getRede() != RedeAfiliado.AWIN || urlProduto == null || urlProduto.isBlank()
+                || p.getAwinMerchantId() == null || pub == null) return Optional.empty();
+        return Optional.of("https://www.awin1.com/cread.php?awinmid=" + p.getAwinMerchantId()
+                + "&awinaffid=" + pub
+                + "&ued=" + URLEncoder.encode(urlProduto.split("#")[0], StandardCharsets.UTF_8));
+    }
+
     /**
      * Usa o link de afiliado informado. Sem ele, monta o link da Awin quando a loja é da Awin e o
      * publisher está configurado. Nos demais casos o link de afiliado é obrigatório (gerado no painel da rede).
      */
     String montarLink(Parceiro p, String url, String urlProduto) {
         if (url != null) return url;
-        if (p.getRede() == RedeAfiliado.AWIN && urlProduto != null && p.getAwinMerchantId() != null
-                && awinPublisherId != null && !awinPublisherId.isBlank()) {
-            return "https://www.awin1.com/cread.php?awinmid=" + p.getAwinMerchantId()
-                    + "&awinaffid=" + awinPublisherId.trim()
-                    + "&ued=" + URLEncoder.encode(urlProduto, StandardCharsets.UTF_8);
-        }
+        Optional<String> awin = linkAwin(p, urlProduto);
+        if (awin.isPresent()) return awin.get();
         if (p.getRede() == RedeAfiliado.AWIN) {
-            throw new NegocioException("Informe o link de afiliado, ou cadastre o ID do anunciante Awin na loja e o AWIN_PUBLISHER_ID no servidor");
+            throw new NegocioException("Informe o link de afiliado, ou configure a Awin em Afiliados (seu ID de publisher e o ID da loja na Awin)");
         }
         throw new NegocioException("Informe o link de afiliado (gerado no painel de afiliados: " + p.getNome() + ")");
     }

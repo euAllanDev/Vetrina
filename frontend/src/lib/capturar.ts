@@ -26,8 +26,10 @@ if(/mercadoli(vre|bre)/.test(h)){
   d={loja:'mercadolivre',nome:T(q('h1.ui-pdp-title'))||meta('og:title'),preco:num(meta('price'))||val(q('.ui-pdp-price__second-line .andes-money-amount')),precoAnterior:val(q('.ui-pdp-price__original-value')),freteGratis:/gr[aá]tis/i.test(T(q('#shipping_summary, .ui-pdp-container__row--shipping-summary'))),nota:num(T(q('.ui-pdp-review__rating'))),imagem:(im&&(im.getAttribute('data-zoom')||im.src))||meta('og:image'),urlProduto:u,detalhes:T(q('.ui-pdp-description__content')).slice(0,1500)};
  }
 }else{
+ var ld=null;[].slice.call(document.querySelectorAll('script[type="application/ld+json"]')).forEach(function(s){try{var j=JSON.parse(s.textContent);[].concat(j['@graph']||j).forEach(function(x){if(!ld&&x&&/Product/.test([].concat(x['@type']).join(',')))ld=x})}catch(e){}});
+ var of=ld&&ld.offers?[].concat(ld.offers)[0]:null,li=ld?[].concat(ld.image||[])[0]:null;if(li&&typeof li==='object')li=li.url;
  var p=precos();
- d={loja:h,nome:T(q('h1'))||meta('og:title')||document.title.split('|')[0],preco:num(meta('product:price:amount'))||p[0],precoAnterior:p[1],imagem:meta('og:image')||(q('main img')||{}).src,urlProduto:u};
+ d={loja:h,nome:(ld&&ld.name)||T(q('h1'))||meta('og:title')||document.title.split('|')[0],preco:num(of&&(of.price||of.lowPrice))||num(meta('product:price:amount'))||p[0],precoAnterior:p[1],imagem:li||meta('og:image')||(q('main img')||{}).src,urlProduto:u,codigo:ld&&(ld.sku||ld.productID)?String(ld.sku||ld.productID):null};
 }
 if(!d||!d.nome||!d.preco){alert('Vetrina: não achei nome e preço nesta página. Abra a página do produto e tente de novo.');return}
 if(d.imagem&&d.imagem.indexOf('//')===0)d.imagem='https:'+d.imagem;
