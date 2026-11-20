@@ -317,7 +317,7 @@ function useCopiado(): [string | null, (k: string, t: string) => void] {
 export function Compartilhar({ p, loja }: { p: Produto; loja: string }) {
   const [copiado, copiar] = useCopiado();
   const url = abs(urlDe({ p: p.id }));
-  const texto = `${p.nome} por ${money(p.preco)}${emOferta(p) && p.desconto ? ` (${p.desconto}% off)` : ''} na ${loja}`;
+  const texto = `${p.nome} por ${money(p.preco)}${emOferta(p) && p.desconto ? ` (${p.desconto}% off)` : ''} na ${loja} (oferta válida enquanto durarem os estoques)`;
   const nativo = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   return (
     <div className="s-share" role="group" aria-label="Salvar e compartilhar">
@@ -344,7 +344,7 @@ export function textoDaLista(titulo: string, loja: string, produtos: Produto[], 
     const off = emOferta(p) && p.desconto ? ` (-${p.desconto}%)` : '';
     return `*${p.nome}*\n${de}*${money(p.preco)}*${off}\n${abs(urlDe({ p: p.id }))}`;
   });
-  return `🔥 *${titulo} na ${loja}*\n\n${itens.join('\n\n')}\n\nVeja tudo: ${abs(urlDe(rota))}`;
+  return `🔥 *${titulo} na ${loja}*\n\n${itens.join('\n\n')}\n\n_Ofertas válidas enquanto durarem os estoques._\nVeja tudo: ${abs(urlDe(rota))}`;
 }
 
 /** Barra para mandar a lista inteira num grupo: abre o WhatsApp com o texto pronto ou copia o texto. */

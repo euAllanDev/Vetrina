@@ -781,3 +781,4 @@
 .s-aviso-msg.ok { color: var(--s-ok); background: #eaf6ef; }
 .s-aviso-msg.erro { color: var(--s-sale); background: #fdecec; }
 .s-aviso + .s-share { margin-top: 12px; }
+.s-estoque { margin: 6px 0 0; font-size: 12px; color: var(--s-ink-3, #767676); }

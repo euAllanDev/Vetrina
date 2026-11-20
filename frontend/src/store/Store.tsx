@@ -723,7 +723,7 @@ function Rodape({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
         </div>
       </div>
       {(dados.parceiros?.length ?? 0) > 0 && (
-        <p className="s-aviso-afiliado">Alguns produtos são vendidos por lojas parceiras. Quando você compra por um link "Ver na loja", podemos receber uma comissão, sem custo extra para você. Preços e disponibilidade são definidos pelas lojas e podem mudar.</p>
+        <p className="s-aviso-afiliado">Alguns produtos são vendidos por lojas parceiras. Quando você compra por um link "Ver na loja", podemos receber uma comissão, sem custo extra para você. Preços e disponibilidade são definidos pelas lojas e podem mudar. Ofertas válidas enquanto durarem os estoques.</p>
       )}
       <div className="s-foot-bottom">
         <span>© {new Date().getFullYear()} {loja.razaoSocial ?? loja.nome}</span>

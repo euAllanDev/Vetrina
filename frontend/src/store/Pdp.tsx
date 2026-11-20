@@ -102,6 +102,7 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
             {p.precoAnterior && p.precoAnterior > p.preco && (
               <p className="s-economia">Você economiza {money(p.precoAnterior - p.preco)}</p>
             )}
+            {afiliado && <p className="s-estoque">Oferta válida enquanto durarem os estoques. Preço e disponibilidade definidos pela loja.</p>}
 
             <div className={`s-disp ${disp.k}`}><span className="dot" />{disp.t}</div>
 
