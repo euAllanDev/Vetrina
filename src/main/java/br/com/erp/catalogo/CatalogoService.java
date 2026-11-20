@@ -133,7 +133,7 @@ public class CatalogoService {
         Categoria c = p.getCategoria();
         List<OfertaVitrine> ov = ofertas.stream().map(o -> new OfertaVitrine(o.getId(), o.getParceiro().getId(),
                 o.getParceiro().getNome(), o.getParceiro().getCor(), o.getPreco(), o.getPrecoAnterior(), o.getFrete(),
-                o.getParcelamento(), o.getNota(), o.getAvaliacoes(), o.isDisponivel(), o.getVerificadoEm())).toList();
+                o.getParcelamento(), o.getNota(), o.getAvaliacoes(), o.isDisponivel(), o.getVerificadoEm(), baixouDe(o))).toList();
         if (!ofertas.isEmpty()) {
             // Produto de afiliado: preço e disponibilidade vêm da melhor oferta.
             Oferta melhor = ofertas.get(0);
@@ -144,7 +144,8 @@ public class CatalogoService {
                     .divide(ant, 0, java.math.RoundingMode.HALF_UP).intValue();
             return new ProdutoVitrine(p.getId(), p.getCodigo(), p.getDescricao(), melhor.getPreco(),
                     c == null ? null : c.getId(), c == null ? null : c.getNome(), p.getUnidade(),
-                    ProdutoResponse.from(p).imagemUrl(), disponivel, null, ant, desc, p.getDetalhes(), novo, maisVendido, ov);
+                    ProdutoResponse.from(p).imagemUrl(), disponivel, null, ant, desc, p.getDetalhes(), novo, maisVendido, ov,
+                    disponivel ? baixouDe(melhor) : null);
         }
         BigDecimal estoque = p.getEstoqueAtual();
         boolean disponivel = estoque.signum() > 0;
@@ -153,7 +154,14 @@ public class CatalogoService {
         return new ProdutoVitrine(p.getId(), p.getCodigo(), p.getDescricao(), p.getPrecoVenda(),
                 c == null ? null : c.getId(), c == null ? null : c.getNome(), p.getUnidade(),
                 ProdutoResponse.from(p).imagemUrl(), disponivel, ultimas,
-                promocao ? p.getPrecoAnterior() : null, promocao ? desconto(p) : null, p.getDetalhes(), novo, maisVendido, ov);
+                promocao ? p.getPrecoAnterior() : null, promocao ? desconto(p) : null, p.getDetalhes(), novo, maisVendido, ov, null);
+    }
+
+    /** Preço antes da queda, se a oferta baixou de preço nos últimos 3 dias. */
+    private static BigDecimal baixouDe(Oferta o) {
+        if (o.getPrecoBaixouDe() == null || o.getBaixouEm() == null) return null;
+        if (o.getBaixouEm().isBefore(LocalDateTime.now().minusDays(3))) return null;
+        return o.getPrecoBaixouDe().compareTo(o.getPreco()) > 0 ? o.getPrecoBaixouDe() : null;
     }
 
     private static Integer desconto(Produto p) {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { money } from '../lib/format';
-import { Card, MarcaLoja, ehAfiliado, emOferta, freteGratis, transicao, urlDe, type Abrir, type Adicionar, type Catalogo, type Rota } from './shared';
+import { Card, MarcaLoja, baixou, ehAfiliado, emOferta, freteGratis, transicao, urlDe, type Abrir, type Adicionar, type Catalogo, type Rota } from './shared';
 
 type Ordem = 'relevancia' | 'menor' | 'maior' | 'az' | 'desconto';
 const ORDENS: { v: Ordem; t: string }[] = [
@@ -51,6 +51,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
     if (cat) l = l.filter((p) => p.categoriaId === cat.id);
     if (lojaRota) l = l.filter((p) => p.ofertas?.some((o) => o.parceiroId === lojaRota.id));
     if (rota.v === 'novidades') l = l.filter((p) => p.novo);
+    if (rota.v === 'baixou') l = l.filter(baixou);
     if (termo) {
       const t = semAcento(termo).split(/\s+/);
       l = l.filter((p) => { const alvo = semAcento(`${p.nome} ${p.categoriaNome ?? ''} ${p.codigo}`); return t.every((x) => alvo.includes(x)); });
@@ -73,7 +74,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
   }, [base, soOferta, soDisp, faixa, ordem, soFrete, lojasSel]);
 
   const faixasUteis = FAIXAS.filter((f) => base.some((p) => p.preco >= f.min && p.preco < f.max));
-  const titulo = termo ? `“${termo}”` : lojaRota ? lojaRota.nome : cat ? cat.nome : rota.v === 'ofertas' ? 'Ofertas' : rota.v === 'novidades' ? 'Novidades' : 'Todos os produtos';
+  const titulo = termo ? `“${termo}”` : lojaRota ? lojaRota.nome : cat ? cat.nome : rota.v === 'ofertas' ? 'Ofertas' : rota.v === 'novidades' ? 'Novidades' : rota.v === 'baixou' ? 'Baixaram de preço' : 'Todos os produtos';
   const filtros = Number(soOferta) + Number(soDisp) + Number(!!faixa) + Number(soFrete) + lojasSel.length;
   const mudar = (fn: () => void) => transicao(fn);
   const limpar = () => mudar(() => { setSoOferta(false); setSoDisp(false); setFaixa(null); setSoFrete(false); setLojasSel([]); });

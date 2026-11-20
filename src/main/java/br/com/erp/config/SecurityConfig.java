@@ -49,6 +49,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/catalogo").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/catalogo/produtos/*/historico").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ir/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/integracoes/mercadolivre/callback").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/integracoes/sincronizar").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/catalogo/pedidos").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

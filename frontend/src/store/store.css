@@ -299,6 +299,8 @@
 .s-card-lojas .marcas .s-marca { box-shadow: 0 0 0 2px #fff; }
 .s-card-lojas .marcas .s-marca + .s-marca { margin-left: -5px; }
 .s-marca { display: inline-grid; place-items: center; flex: none; border-radius: 6px; font-family: var(--s-sans); font-weight: 700; line-height: 1; }
+.s-selo.baixou { background: #0a7d4f; color: #fff; }
+.s-selo.baixou::before { content: '↓ '; }
 .s-selo.frete { background: var(--s-ok); color: #fff; }
 
 /* ---------- Preço ---------- */

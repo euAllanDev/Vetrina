@@ -11,6 +11,8 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long>, JpaSpec
 
     boolean existsByCodigoIgnoreCase(String codigo);
 
+    java.util.Optional<Produto> findFirstByCodigoIgnoreCase(String codigo);
+
     boolean existsByCategoriaId(Long categoriaId);
 
     @Query("select p from Produto p where p.ativo = true and p.estoqueAtual <= p.estoqueMinimo order by p.descricao")

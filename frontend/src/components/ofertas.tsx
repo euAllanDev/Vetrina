@@ -35,15 +35,16 @@ export function MarcaParceiro({ nome, cor, size = 22 }: { nome: string; cor: str
 interface Form {
   parceiroId: string; url: string; urlProduto: string; preco: number | ''; precoAnterior: number | '';
   freteTipo: 'nao' | 'gratis' | 'valor'; frete: number | ''; parcelamento: string; nota: number | ''; avaliacoes: number | '';
-  disponivel: boolean; ativo: boolean;
+  disponivel: boolean; ativo: boolean; codigoExterno: string; atualizacaoAuto: boolean;
 }
-const VAZIO: Form = { parceiroId: '', url: '', urlProduto: '', preco: '', precoAnterior: '', freteTipo: 'nao', frete: '', parcelamento: '', nota: '', avaliacoes: '', disponivel: true, ativo: true };
+const VAZIO: Form = { parceiroId: '', url: '', urlProduto: '', preco: '', precoAnterior: '', freteTipo: 'nao', frete: '', parcelamento: '', nota: '', avaliacoes: '', disponivel: true, ativo: true, codigoExterno: '', atualizacaoAuto: true };
 
 function deOferta(o: OfertaAdmin): Form {
   return {
     parceiroId: String(o.parceiroId), url: o.url, urlProduto: o.urlProduto ?? '', preco: o.preco, precoAnterior: o.precoAnterior ?? '',
     freteTipo: o.frete == null ? 'nao' : o.frete === 0 ? 'gratis' : 'valor', frete: o.frete && o.frete > 0 ? o.frete : '',
     parcelamento: o.parcelamento ?? '', nota: o.nota ?? '', avaliacoes: o.avaliacoes ?? '', disponivel: o.disponivel, ativo: o.ativo,
+    codigoExterno: o.codigoExterno ?? '', atualizacaoAuto: o.atualizacaoAuto,
   };
 }
 
@@ -81,6 +82,7 @@ export function OfertasProduto({ produtoId, podeEditar }: { produtoId: number; p
       parcelamento: f.parcelamento.trim() || null,
       nota: f.nota === '' ? null : Number(f.nota), avaliacoes: f.avaliacoes === '' ? null : Number(f.avaliacoes),
       disponivel: f.disponivel, ativo: f.ativo,
+      codigoExterno: f.codigoExterno.trim() || null, atualizacaoAuto: f.atualizacaoAuto,
     };
     const r = await act.run(() => (editando === 'nova'
       ? api.post<OfertaAdmin>(`/produtos/${produtoId}/ofertas`, body)
@@ -125,7 +127,9 @@ export function OfertasProduto({ produtoId, podeEditar }: { produtoId: number; p
                       <MarcaParceiro nome={o.parceiroNome} cor={o.parceiroCor} />
                       <div>
                         <div className="cell-title row">{o.parceiroNome}
-                          {!o.ativo && <Badge plain>Oculta</Badge>}{!o.disponivel && <Badge tone="warning">Indisponível</Badge>}</div>
+                          {!o.ativo && <Badge plain>Oculta</Badge>}{!o.disponivel && <Badge tone="warning">Indisponível</Badge>}
+                          {o.rede === 'MERCADO_LIVRE' && o.atualizacaoAuto && !o.erroSincronizacao && <Badge tone="success" plain>Auto</Badge>}
+                          {o.erroSincronizacao && <span title={o.erroSincronizacao}><Badge tone="danger">Erro no robô</Badge></span>}</div>
                         <a className="cell-sub" href={o.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}>{o.url}</a>
                       </div>
                     </div>
@@ -176,7 +180,11 @@ export function OfertasProduto({ produtoId, podeEditar }: { produtoId: number; p
             <Field label="Parcelamento" className="col-4" hint="Como aparece na loja. Ex.: 10x sem juros">{(i) => <Input id={i} maxLength={60} value={f.parcelamento} onChange={(e) => set('parcelamento')(e.target.value)} />}</Field>
             <Field label="Nota na loja (0 a 5)" className="col-4" error={fe.nota}>{(i) => <NumberInput id={i} step="0.1" value={f.nota} onChange={set('nota')} />}</Field>
             <Field label="Nº de avaliações" className="col-4">{(i) => <NumberInput id={i} step="1" value={f.avaliacoes} onChange={set('avaliacoes')} />}</Field>
-            <div className="col-12 row" style={{ gap: 20 }}>
+            {parceiroSel?.rede === 'MERCADO_LIVRE' && (
+              <Field label="Código no Mercado Livre" className="col-4" hint="Opcional: sai sozinho do endereço do produto (MLB…).">{(i) => <Input id={i} className="mono" maxLength={40} value={f.codigoExterno} onChange={(e) => set('codigoExterno')(e.target.value.toUpperCase())} />}</Field>
+            )}
+            <div className="col-12 row" style={{ gap: 20, flexWrap: 'wrap' }}>
+              {parceiroSel?.rede === 'MERCADO_LIVRE' && <label className="check"><input type="checkbox" checked={f.atualizacaoAuto} onChange={(e) => set('atualizacaoAuto')(e.target.checked)} />Robô atualiza preço sozinho</label>}
               <label className="check"><input type="checkbox" checked={f.disponivel} onChange={(e) => set('disponivel')(e.target.checked)} />Disponível na loja</label>
               <label className="check"><input type="checkbox" checked={f.ativo} onChange={(e) => set('ativo')(e.target.checked)} />Mostrar na vitrine</label>
             </div>

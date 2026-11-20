@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, useAsync } from '../lib/hooks';
 import { navigate, useRoute } from '../lib/router';
-import type { Parceiro, RedeAfiliado, RelatorioCliques } from '../lib/types';
+import type { Categoria, ImportacaoMl, Parceiro, RedeAfiliado, RelatorioCliques, StatusMercadoLivre } from '../lib/types';
+import { dateTime, money } from '../lib/format';
 import { Alert, Badge, Button, Card, Empty, ErrorState, Field, Input, Kpi, PageHeader, Segmented, Select, TableSkeleton } from '../components/ui';
 import { Drawer, useToast } from '../components/overlay';
 import { BarChart } from '../components/charts';
@@ -24,6 +25,9 @@ export function Afiliados() {
     <>
       <PageHeader title="Afiliados" sub={<>Lojas parceiras e cliques em “Ver na loja”. As ofertas de cada produto ficam em <a href="#/produtos">Produtos</a> → aba Ofertas.</>}
         actions={<Button variant="primary" icon="plus" onClick={() => navigate('/afiliados?novo=1')}>Nova loja parceira</Button>} />
+
+      <AutomacaoMl query={query} />
+      <div style={{ height: 16 }} />
 
       <div className="grid grid-kpi" style={{ marginBottom: 16 }}>
         <Kpi label={`Cliques em ${dias} dias`} value={rel.data ? rel.data.total.toLocaleString('pt-BR') : '—'} icon="external" />
@@ -149,5 +153,90 @@ function ParceiroDrawer({ p, onClose, onSaved }: { p: Parceiro | null; onClose: 
         <div className="col-12"><label className="check"><input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />Loja ativa (as ofertas dela aparecem na vitrine)</label></div>
       </div>
     </Drawer>
+  );
+}
+
+/* ============================== automação Mercado Livre ============================== */
+function AutomacaoMl({ query }: { query: URLSearchParams }) {
+  const toast = useToast();
+  const st = useAsync(() => api.get<StatusMercadoLivre>('/integracoes/mercadolivre'), []);
+  const cats = useAsync(() => api.get<Categoria[]>('/categorias'), []);
+  const act = useAction();
+  const imp = useAction();
+  const [urlProduto, setUrlProduto] = useState('');
+  const [url, setUrl] = useState('');
+  const [categoriaId, setCategoriaId] = useState('');
+  const [ultimo, setUltimo] = useState<ImportacaoMl | null>(null);
+  const retorno = query.get('ml');
+  const msg = query.get('msg');
+
+  useEffect(() => {
+    if (retorno === 'ok') toast.ok('Conta do Mercado Livre conectada');
+  }, [retorno]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const conectar = async () => {
+    const r = await act.run(() => api.post<{ url: string }>('/integracoes/mercadolivre/conectar'));
+    if (r) window.location.href = r.url;
+  };
+  const atualizar = async () => {
+    const r = await act.run(async () => { await api.post('/integracoes/sincronizar'); return true; });
+    if (r) { toast.ok('Robô iniciado: os preços vão sendo atualizados em segundo plano'); window.setTimeout(st.reload, 8000); }
+  };
+  const importar = async () => {
+    const r = await imp.run(() => api.post<ImportacaoMl>('/integracoes/mercadolivre/importar',
+      { urlProduto: urlProduto.trim(), url: url.trim(), categoriaId: categoriaId ? Number(categoriaId) : null }));
+    if (r) { setUltimo(r); setUrlProduto(''); setUrl(''); toast.ok(`${r.nome} publicado`); }
+  };
+
+  const s = st.data;
+  return (
+    <Card title="Mercado Livre: importação e robô de preços"
+      actions={s?.conectado ? <Badge tone="success">Conectado{s.apelido ? ` · ${s.apelido}` : ''}</Badge> : s ? <Badge tone="warning">Não conectado</Badge> : null}>
+      <div className="card-body" style={{ display: 'grid', gap: 16 }}>
+        {retorno === 'erro' && <Alert>{msg ?? 'Não foi possível conectar a conta.'}</Alert>}
+        {act.error && <Alert>{act.error}</Alert>}
+        {st.error ? <ErrorState message={st.error} onRetry={st.reload} /> : !s ? <TableSkeleton rows={2} cols={2} /> : !s.configurado ? (
+          <Alert tone="info">Falta configurar o app do Mercado Livre no servidor (variáveis ML_CLIENT_ID, ML_CLIENT_SECRET e ML_REDIRECT_URI no Render).</Alert>
+        ) : !s.conectado ? (
+          <div className="row" style={{ justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <p className="ink-2" style={{ margin: 0, maxWidth: '60ch' }}>Conecte a sua conta do Mercado Livre para importar produtos pelo link e deixar o robô conferir os preços sozinho a cada 6 horas.</p>
+            <Button variant="primary" icon="link" loading={act.busy} onClick={conectar}>Conectar Mercado Livre</Button>
+          </div>
+        ) : (
+          <>
+            <div className="row" style={{ justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div className="cell-title">Robô de preços</div>
+                <div className="cell-sub">{s.ultimaSincronizacao ? `Última conferência: ${dateTime(s.ultimaSincronizacao)} · ${s.ultimoResumo ?? ''}` : 'Ainda não rodou.'}</div>
+                <div className="cell-sub">{s.agendadorExterno ? 'Agendado a cada 6 horas.' : 'Roda a cada 6 horas enquanto o servidor estiver acordado (configure o agendador do GitHub para garantir).'}</div>
+              </div>
+              <div className="row" style={{ gap: 8 }}>
+                <Button icon="refresh" loading={act.busy} onClick={atualizar}>Atualizar preços agora</Button>
+                <Button variant="ghost" onClick={conectar}>Reconectar</Button>
+              </div>
+            </div>
+            <div className="form-section" style={{ margin: 0 }}>Importar produto pelo link</div>
+            {imp.error && <Alert>{imp.error}</Alert>}
+            <div className="form-grid">
+              <Field label="Endereço do produto no Mercado Livre" className="col-12" hint="Abra o produto no Mercado Livre e copie o endereço da barra do navegador (tem MLB no meio).">
+                {(i) => <Input id={i} type="url" placeholder="https://www.mercadolivre.com.br/…" value={urlProduto} onChange={(e) => setUrlProduto(e.target.value)} />}</Field>
+              <Field label="Seu link de afiliado" className="col-6" hint="O link curto que o Mercado Livre gera para você (meli.la).">
+                {(i) => <Input id={i} type="url" placeholder="https://meli.la/…" value={url} onChange={(e) => setUrl(e.target.value)} />}</Field>
+              <Field label="Categoria na loja" className="col-6">{(i) => (
+                <Select id={i} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
+                  <option value="">Sem categoria</option>
+                  {cats.data?.filter((c) => c.ativo).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </Select>)}</Field>
+            </div>
+            <div className="row" style={{ justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              {ultimo ? (
+                <span className="ink-2">Último importado: <a href={`#/produtos?id=${ultimo.produtoId}`}>{ultimo.nome}</a> · {money(ultimo.preco)}{ultimo.precoAnterior ? ` (de ${money(ultimo.precoAnterior)})` : ''}{ultimo.foto ? '' : ' · sem foto'}</span>
+              ) : <span className="ink-2">Nome, foto, preço e frete vêm do Mercado Livre. O produto entra na vitrine na hora.</span>}
+              <Button variant="primary" icon="download" loading={imp.busy} disabled={!urlProduto.trim() || !url.trim()} onClick={importar}>Importar e publicar</Button>
+            </div>
+          </>
+        )}
+      </div>
+    </Card>
   );
 }

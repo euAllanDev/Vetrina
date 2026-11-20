@@ -129,6 +129,11 @@ public class AfiliadoService {
         if (urlProduto != null) validarUrl(urlProduto, "Endereço do produto");
         o.setUrl(url);
         o.setUrlProduto(urlProduto);
+        if (o.getPreco() != null && o.getPreco().compareTo(req.preco()) != 0) {
+            // Alteração manual de preço apaga o selo "Baixou" antigo.
+            o.setPrecoBaixouDe(null);
+            o.setBaixouEm(null);
+        }
         o.setPreco(req.preco());
         o.setPrecoAnterior(req.precoAnterior() != null && req.precoAnterior().compareTo(req.preco()) > 0 ? req.precoAnterior() : null);
         o.setFrete(req.frete());
@@ -137,6 +142,12 @@ public class AfiliadoService {
         o.setAvaliacoes(req.avaliacoes());
         if (req.disponivel() != null) o.setDisponivel(req.disponivel());
         if (req.ativo() != null) o.setAtivo(req.ativo());
+        if (req.atualizacaoAuto() != null) o.setAtualizacaoAuto(req.atualizacaoAuto());
+        String cod = vazioParaNulo(req.codigoExterno());
+        if (cod == null && p.getRede() == RedeAfiliado.MERCADO_LIVRE) {
+            cod = br.com.erp.integracao.MercadoLivreClient.codigoDaUrl(urlProduto);
+        }
+        if (cod != null) o.setCodigoExterno(cod.toUpperCase());
         o.setVerificadoEm(LocalDateTime.now());
     }
 

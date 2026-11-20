@@ -43,6 +43,16 @@ app:
     awin:
       # Seu ID de publisher na Awin (Conta > Detalhes). Com ele, links da Awin são montados a partir do endereço do produto.
       publisher-id: ${AWIN_PUBLISHER_ID:}
+  integracoes:
+    # Chave que o agendador externo (GitHub Actions) manda no cabeçalho X-Cron-Key para rodar o robô de preços.
+    cron-key: ${CRON_KEY:}
+    cron: ${PRECOS_CRON:0 7 */6 * * *}
+    # Para onde voltar depois de conectar a conta (endereço do painel).
+    painel-url: ${PAINEL_URL:/}
+    mercadolivre:
+      client-id: ${ML_CLIENT_ID:}
+      client-secret: ${ML_CLIENT_SECRET:}
+      redirect-uri: ${ML_REDIRECT_URI:}
   estoque:
     permitir-negativo: ${ESTOQUE_PERMITIR_NEGATIVO:false}
   nfe:

@@ -10,18 +10,20 @@ export interface Produto {
   unidade: string; imagemUrl: string | null; disponivel: boolean; ultimasUnidades: number | null;
   precoAnterior: number | null; desconto: number | null; detalhes: string | null; novo: boolean; maisVendido: boolean;
   ofertas: Oferta[];
+  /** Preço antes da última queda (robô de preços, últimos 3 dias). */
+  baixouDe?: number | null;
 }
 /** Oferta numa loja parceira. O clique passa por /api/ir/{id}, que conta e redireciona para o link de afiliado. */
 export interface Oferta {
   id: number; parceiroId: number; loja: string; cor: string | null; preco: number; precoAnterior: number | null;
   frete: number | null; parcelamento: string | null; nota: number | null; avaliacoes: number | null;
-  disponivel: boolean; verificadoEm: string | null;
+  disponivel: boolean; verificadoEm: string | null; baixouDe?: number | null;
 }
 export interface ParceiroV { id: number; nome: string; cor: string | null; produtos: number }
 export interface Catalogo { loja: Loja; categorias: Categoria[]; produtos: Produto[]; parceiros?: ParceiroV[] }
 
 /** Estado de navegação da loja, espelhado na URL (?c=, ?p=, ?q=, ?l=loja, ?v=ofertas|novidades). */
-export interface Rota { p?: number; c?: number; q?: string; l?: number; v?: 'ofertas' | 'novidades' | 'todos' }
+export interface Rota { p?: number; c?: number; q?: string; l?: number; v?: 'ofertas' | 'novidades' | 'todos' | 'baixou' }
 
 export function lerRota(): Rota {
   const s = new URLSearchParams(window.location.search);
@@ -31,7 +33,7 @@ export function lerRota(): Rota {
   if (s.get('q')) r.q = s.get('q')!;
   if (s.get('l')) r.l = Number(s.get('l'));
   const v = s.get('v');
-  if (v === 'ofertas' || v === 'novidades' || v === 'todos') r.v = v;
+  if (v === 'ofertas' || v === 'novidades' || v === 'todos' || v === 'baixou') r.v = v;
   return r;
 }
 
@@ -60,6 +62,7 @@ export const limiteDe = (p: Produto) => p.ultimasUnidades ?? 99;
 /** Produto de afiliado: vendido nas lojas parceiras (não entra na sacola). */
 export const ehAfiliado = (p: Produto) => (p.ofertas?.length ?? 0) > 0;
 export const linkOferta = (o: Oferta) => `/api/ir/${o.id}`;
+export const baixou = (p: Produto) => !!p.baixouDe && p.baixouDe > p.preco;
 export const freteGratis = (p: Produto) => ehAfiliado(p) && p.ofertas[0]?.frete === 0;
 
 /** "no Mercado Livre", "na Shopee"… (artigo certo para cada loja). */
@@ -147,6 +150,7 @@ export function Selos({ p }: { p: Produto }) {
   const s: { t: string; k: string }[] = [];
   if (!p.disponivel) s.push({ t: 'Esgotado', k: 'out' });
   else {
+    if (baixou(p)) s.push({ t: `Baixou ${money(p.baixouDe! - p.preco).replace(',00', '')}`, k: 'baixou' });
     if (emOferta(p) && p.desconto) s.push({ t: `-${p.desconto}%`, k: 'sale' });
     if (p.novo) s.push({ t: 'Novo', k: 'new' });
     if (p.maisVendido) s.push({ t: 'Mais vendido', k: 'top' });

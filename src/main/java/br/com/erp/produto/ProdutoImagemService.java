@@ -39,6 +39,22 @@ public class ProdutoImagemService {
         } catch (IOException e) {
             throw new NegocioException("Não foi possível ler o arquivo enviado");
         }
+        return salvarBytes(produto, dados);
+    }
+
+    /** Salva a imagem a partir dos bytes (usado também na importação automática de produtos). */
+    @Transactional
+    public ProdutoResponse salvarBytes(Long produtoId, byte[] dados) {
+        Produto produto = produtoRepository.findById(produtoId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", produtoId));
+        if (dados == null || dados.length == 0 || dados.length > TAMANHO_MAXIMO) {
+            throw new NegocioException("Imagem vazia ou maior que 3 MB");
+        }
+        return salvarBytes(produto, dados);
+    }
+
+    private ProdutoResponse salvarBytes(Produto produto, byte[] dados) {
+        Long produtoId = produto.getId();
         String tipo = detectarTipo(dados);
         if (tipo == null || !TIPOS.contains(tipo)) {
             throw new NegocioException("Formato não suportado. Use JPG, PNG ou WebP.");

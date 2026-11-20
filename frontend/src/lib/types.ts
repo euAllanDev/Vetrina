@@ -124,7 +124,13 @@ export interface OfertaAdmin {
   id: number; produtoId: number; parceiroId: number; parceiroNome: string; parceiroCor: string | null; rede: RedeAfiliado;
   url: string; urlProduto: string | null; preco: number; precoAnterior: number | null; frete: number | null; parcelamento: string | null;
   nota: number | null; avaliacoes: number | null; disponivel: boolean; ativo: boolean; verificadoEm: string | null; cliques: number;
+  codigoExterno: string | null; atualizacaoAuto: boolean; sincronizadoEm: string | null; erroSincronizacao: string | null;
 }
+export interface StatusMercadoLivre {
+  configurado: boolean; conectado: boolean; apelido: string | null; conectadoEm: string | null;
+  ultimaSincronizacao: string | null; ultimoResumo: string | null; agendadorExterno: boolean;
+}
+export interface ImportacaoMl { produtoId: number; ofertaId: number; nome: string; preco: number; precoAnterior: number | null; foto: boolean }
 export interface RelatorioCliques {
   dias: number; total: number;
   porDia: { dia: string; cliques: number }[];

@@ -66,4 +66,23 @@ public class Oferta extends BaseEntity {
 
     @Column(nullable = false)
     private long cliques;
+
+    /** Código do anúncio/produto na loja (ex.: MLB123... no Mercado Livre), usado pelo robô de preços. */
+    @Column(length = 40)
+    private String codigoExterno;
+
+    /** Se o robô deve atualizar preço e disponibilidade sozinho. */
+    @Column(nullable = false)
+    private boolean atualizacaoAuto = true;
+
+    private LocalDateTime sincronizadoEm;
+
+    @Column(length = 255)
+    private String erroSincronizacao;
+
+    /** Preço antes da última queda (para o selo "Baixou"). */
+    @Column(precision = 15, scale = 2)
+    private BigDecimal precoBaixouDe;
+
+    private LocalDateTime baixouEm;
 }

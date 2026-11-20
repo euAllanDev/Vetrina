@@ -1,0 +1,30 @@
+# Robô de preços: acorda o backend no Render (plano grátis dorme) e manda atualizar os preços.
+# Precisa do segredo CRON_KEY em Settings > Secrets and variables > Actions (mesmo valor da variável CRON_KEY no Render).
+name: Atualizar precos
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"   # a cada 6 horas (horário UTC)
+  workflow_dispatch: {}      # botão "Run workflow" para rodar na hora
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      API: https://vetrina-42b1.onrender.com
+    steps:
+      - name: Acordar o servidor
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$API/actuator/health" || true)
+            echo "tentativa $i: HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 15
+          done
+          echo "Servidor não acordou a tempo"; exit 1
+      - name: Atualizar preços
+        run: |
+          curl -sS --fail-with-body --max-time 900 -X POST \
+            -H "X-Cron-Key: ${{ secrets.CRON_KEY }}" \
+            "$API/api/integracoes/sincronizar"

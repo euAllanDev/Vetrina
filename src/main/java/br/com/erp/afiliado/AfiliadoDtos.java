@@ -40,19 +40,23 @@ public final class AfiliadoDtos {
             @DecimalMin("0") @DecimalMax("5") BigDecimal nota,
             @PositiveOrZero Integer avaliacoes,
             Boolean disponivel,
-            Boolean ativo) {
+            Boolean ativo,
+            @Size(max = 40) String codigoExterno,
+            Boolean atualizacaoAuto) {
     }
 
     public record OfertaResponse(Long id, Long produtoId, Long parceiroId, String parceiroNome, String parceiroCor,
                                  RedeAfiliado rede, String url, String urlProduto, BigDecimal preco,
                                  BigDecimal precoAnterior, BigDecimal frete, String parcelamento, BigDecimal nota,
                                  Integer avaliacoes, boolean disponivel, boolean ativo, LocalDateTime verificadoEm,
-                                 long cliques) {
+                                 long cliques, String codigoExterno, boolean atualizacaoAuto, LocalDateTime sincronizadoEm,
+                                 String erroSincronizacao) {
         static OfertaResponse from(Oferta o) {
             Parceiro p = o.getParceiro();
             return new OfertaResponse(o.getId(), o.getProduto().getId(), p.getId(), p.getNome(), p.getCor(), p.getRede(),
                     o.getUrl(), o.getUrlProduto(), o.getPreco(), o.getPrecoAnterior(), o.getFrete(), o.getParcelamento(),
-                    o.getNota(), o.getAvaliacoes(), o.isDisponivel(), o.isAtivo(), o.getVerificadoEm(), o.getCliques());
+                    o.getNota(), o.getAvaliacoes(), o.isDisponivel(), o.isAtivo(), o.getVerificadoEm(), o.getCliques(),
+                    o.getCodigoExterno(), o.isAtualizacaoAuto(), o.getSincronizadoEm(), o.getErroSincronizacao());
         }
     }
 

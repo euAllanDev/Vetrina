@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Foto, MarcaLoja, Seta, Trilho, ehAfiliado, emOferta, reduzMovimento, urlDe, useRevela, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
+import { Card, Foto, MarcaLoja, Seta, Trilho, baixou, ehAfiliado, emOferta, reduzMovimento, urlDe, useRevela, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
 
 /** Frases de campanha por categoria (as que não estiverem aqui usam o próprio nome). */
 const FRASES: Record<string, string> = {
@@ -29,6 +29,8 @@ export function Home({ dados, ir, onAbrir, onAdicionar }: Props) {
 
   const maisVendidos = produtos.filter((p) => p.maisVendido && p.disponivel);
   const novidades = produtos.filter((p) => p.novo);
+  const baixaram = produtos.filter((p) => baixou(p) && p.disponivel)
+    .sort((a, b) => (b.baixouDe! - b.preco) / b.baixouDe! - (a.baixouDe! - a.preco) / a.baixouDe!);
   const ofertas = produtos.filter((p) => emOferta(p) && p.disponivel).sort((a, b) => (b.desconto ?? 0) - (a.desconto ?? 0));
   const destaques = maisVendidos.length >= 4 ? maisVendidos : produtos.filter((p) => p.disponivel && p.imagemUrl).slice(0, 10);
 
@@ -41,6 +43,13 @@ export function Home({ dados, ir, onAbrir, onAdicionar }: Props) {
       <Letreiro itens={categorias.map((c) => c.nome)} />
 
       <Passos comparador={produtos.some(ehAfiliado)} />
+
+      {baixaram.length > 0 && (
+        <Trilho titulo="Baixaram de preço" sub="O robô encontrou estes preços menores nos últimos dias"
+          acao={<a className="s-link-strong" href={urlDe({ v: 'baixou' })} onClick={(e) => { e.preventDefault(); ir({ v: 'baixou' }); }}>Ver tudo</a>}>
+          {baixaram.map(cartao)}
+        </Trilho>
+      )}
 
       <Trilho titulo={maisVendidos.length >= 4 ? 'Mais vendidos' : 'Destaques'}
         sub={maisVendidos.length >= 4 ? 'O que mais saiu nos últimos 90 dias' : 'Uma seleção da vitrine'}

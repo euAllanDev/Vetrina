@@ -7,6 +7,7 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import static org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO;
 
 @SpringBootApplication
+@org.springframework.scheduling.annotation.EnableScheduling
 @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)
 public class ErpApplication {
 

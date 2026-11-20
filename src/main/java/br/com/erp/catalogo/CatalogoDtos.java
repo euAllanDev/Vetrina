@@ -23,13 +23,13 @@ public final class CatalogoDtos {
     public record ProdutoVitrine(Long id, String codigo, String nome, BigDecimal preco, Long categoriaId, String categoriaNome,
                                  String unidade, String imagemUrl, boolean disponivel, Integer ultimasUnidades,
                                  BigDecimal precoAnterior, Integer desconto, String detalhes, boolean novo, boolean maisVendido,
-                                 List<OfertaVitrine> ofertas) {
+                                 List<OfertaVitrine> ofertas, BigDecimal baixouDe) {
     }
 
     /** Oferta numa loja parceira. O link de afiliado não vai para a vitrine: o clique passa por /api/ir/{id}. */
     public record OfertaVitrine(Long id, Long parceiroId, String loja, String cor, BigDecimal preco, BigDecimal precoAnterior,
                                 BigDecimal frete, String parcelamento, BigDecimal nota, Integer avaliacoes,
-                                boolean disponivel, LocalDateTime verificadoEm) {
+                                boolean disponivel, LocalDateTime verificadoEm, BigDecimal baixouDe) {
     }
 
     public record ParceiroVitrine(Long id, String nome, String cor, long produtos) {
