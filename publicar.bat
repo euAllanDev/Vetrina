@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Robo de precos do Mercado Livre: importar por link, atualizacao automatica e selo Baixou
+  echo Corrige catalogo: coluna atualizacao_auto com default no banco
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM

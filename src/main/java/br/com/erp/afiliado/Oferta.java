@@ -71,8 +71,8 @@ public class Oferta extends BaseEntity {
     @Column(length = 40)
     private String codigoExterno;
 
-    /** Se o robô deve atualizar preço e disponibilidade sozinho. */
-    @Column(nullable = false)
+    /** Se o robô deve atualizar preço e disponibilidade sozinho. (default no banco: tabelas já com dados) */
+    @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean atualizacaoAuto = true;
 
     private LocalDateTime sincronizadoEm;
