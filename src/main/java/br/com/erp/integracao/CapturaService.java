@@ -33,6 +33,7 @@ public class CapturaService {
     private final HistoricoPrecoRepository historico;
     private final ProdutoRepository produtos;
     private final CategoriaRepository categorias;
+    private final org.springframework.context.ApplicationEventPublisher eventos;
 
     public record CapturaRequest(String loja, String nome, BigDecimal preco, BigDecimal precoAnterior, Boolean freteGratis,
                                  BigDecimal nota, String urlProduto, String codigo, String linkAfiliado, Long categoriaId,
@@ -177,6 +178,7 @@ public class CapturaService {
         o.setVerificadoEm(agora);
         o = ofertas.save(o);
         historico.save(new HistoricoPreco(o, o.getPreco()));
+        if ((bits & 1) != 0) eventos.publishEvent(new br.com.erp.alerta.PrecoMudou(prod.getId()));
 
         // Mantém o preço do cadastro em dia (a vitrine usa a melhor oferta, mas o painel mostra este).
         prod.setPrecoVenda(o.getPreco());

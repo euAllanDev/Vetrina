@@ -764,3 +764,20 @@
 @media (prefers-reduced-motion: reduce) { .s-fav span.pulso { animation: none; } }
 .s-pdp-media .s-fav { top: 16px; right: 16px; width: 44px; height: 44px; z-index: 2; }
 .s-pdp-media .s-fav svg { width: 22px; height: 22px; }
+
+/* ============================== aviso de preço ============================== */
+.s-aviso { margin-top: 22px; display: grid; gap: 8px; }
+.s-aviso-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 48px; padding: 0 20px; border-radius: 999px;
+  border: 1.5px solid var(--s-ink); background: #fff; color: var(--s-ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: background .15s, color .15s, transform .1s;
+}
+.s-aviso-btn:hover:not(:disabled) { background: var(--s-ink); color: #fff; }
+.s-aviso-btn:active:not(:disabled) { transform: scale(0.98); }
+.s-aviso-btn:disabled { opacity: .6; cursor: progress; }
+.s-aviso-btn.on { background: var(--s-ok); border-color: var(--s-ok); color: #fff; }
+.s-aviso-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.s-aviso-msg { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--s-ink-2); background: var(--s-soft); padding: 10px 12px; border-radius: 10px; }
+.s-aviso-msg.ok { color: var(--s-ok); background: #eaf6ef; }
+.s-aviso-msg.erro { color: var(--s-sale); background: #fdecec; }
+.s-aviso + .s-share { margin-top: 12px; }

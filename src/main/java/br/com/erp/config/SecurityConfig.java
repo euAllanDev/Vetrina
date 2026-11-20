@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/integracoes/mercadolivre/callback").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/integracoes/sincronizar").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/catalogo/pedidos").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/alertas/chave").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/alertas", "/api/alertas/remover").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

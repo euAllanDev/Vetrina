@@ -39,6 +39,7 @@ public class PrecoRoboService {
     private final ProdutoImagemService imagens;
     private final IntegracaoContaRepository contas;
     private final TransactionTemplate tx;
+    private final org.springframework.context.ApplicationEventPublisher eventos;
     private final AtomicBoolean rodando = new AtomicBoolean(false);
 
     public record Resumo(int conferidas, int alteradas, int baixaram, int indisponiveis, int erros, String quando) {
@@ -118,6 +119,7 @@ public class PrecoRoboService {
         DadosLoja d = ml.consultar(codigo);
         LocalDateTime agora = LocalDateTime.now();
         int r = aplicarPreco(o, d.disponivel() ? d.preco() : null, d.precoAnterior(), d.freteGratis(), agora);
+        if ((r & 1) != 0) eventos.publishEvent(new br.com.erp.alerta.PrecoMudou(o.getProduto().getId()));
         historico.save(new HistoricoPreco(o, o.getPreco()));
         o.setVerificadoEm(agora);
         o.setSincronizadoEm(agora);

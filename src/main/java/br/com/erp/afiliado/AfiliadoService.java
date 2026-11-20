@@ -28,6 +28,7 @@ public class AfiliadoService {
     private final HistoricoPrecoRepository historico;
     private final CliqueRepository cliques;
     private final ProdutoRepository produtos;
+    private final org.springframework.context.ApplicationEventPublisher eventos;
 
     /** ID de publisher na Awin (Conta → Detalhes). Com ele, links Awin são montados sozinhos. */
     @Value("${app.afiliados.awin.publisher-id:}")
@@ -90,6 +91,7 @@ public class AfiliadoService {
         preencher(o, req);
         o = ofertas.save(o);
         historico.save(new HistoricoPreco(o, o.getPreco()));
+        eventos.publishEvent(new br.com.erp.alerta.PrecoMudou(produtoId));
         return OfertaResponse.from(o);
     }
 
@@ -101,6 +103,7 @@ public class AfiliadoService {
         if (antes == null || antes.compareTo(o.getPreco()) != 0) {
             historico.save(new HistoricoPreco(o, o.getPreco()));
         }
+        eventos.publishEvent(new br.com.erp.alerta.PrecoMudou(o.getProduto().getId()));
         return OfertaResponse.from(o);
     }
 
