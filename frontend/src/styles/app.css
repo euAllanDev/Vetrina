@@ -440,3 +440,19 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .foto-drop-busy { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--surface) 70%, transparent); }
 .produto-topo { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 18px; }
 @media (max-width: 600px) { .produto-topo { flex-direction: column; } }
+
+/* ---------- captura de produtos pelo favorito ---------- */
+.captura-fav { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start; }
+.captura-btn { cursor: grab; user-select: none; }
+.captura-btn:active { cursor: grabbing; }
+.captura-passos { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-2); }
+.captura-prev { display: flex; gap: 16px; align-items: flex-start; }
+.captura-prev img, .captura-sem-foto {
+  width: 112px; height: 140px; object-fit: contain; flex: none; border-radius: var(--r-md);
+  border: 1px solid var(--hairline); background: #fff;
+}
+.captura-sem-foto { display: grid; place-items: center; color: var(--ink-3); font-size: 12px; background: var(--surface-2); }
+@media (max-width: 720px) {
+  .captura-fav { grid-template-columns: 1fr; }
+  .captura-prev { flex-direction: column; }
+}

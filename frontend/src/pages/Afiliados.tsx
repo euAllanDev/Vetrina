@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, useAsync } from '../lib/hooks';
 import { navigate, useRoute } from '../lib/router';
-import type { Categoria, ImportacaoMl, Parceiro, RedeAfiliado, RelatorioCliques, StatusMercadoLivre } from '../lib/types';
+import type { CapturaResultado, CapturaVerificacao, Categoria, ImportacaoMl, Parceiro, RedeAfiliado, RelatorioCliques, StatusMercadoLivre } from '../lib/types';
 import { dateTime, money } from '../lib/format';
-import { Alert, Badge, Button, Card, Empty, ErrorState, Field, Input, Kpi, PageHeader, Segmented, Select, TableSkeleton } from '../components/ui';
+import { Alert, Badge, Button, Card, Empty, ErrorState, Field, Input, Kpi, NumberInput, PageHeader, Segmented, Select, TableSkeleton } from '../components/ui';
+import { lerCaptura, linkDoFavorito, type Capturado } from '../lib/capturar';
+import { reduzirImagem } from '../lib/imagem';
 import { Drawer, useToast } from '../components/overlay';
 import { BarChart } from '../components/charts';
 import { MarcaParceiro, REDE_LABEL } from '../components/ofertas';
@@ -26,8 +28,10 @@ export function Afiliados() {
       <PageHeader title="Afiliados" sub={<>Lojas parceiras e cliques em “Ver na loja”. As ofertas de cada produto ficam em <a href="#/produtos">Produtos</a> → aba Ofertas.</>}
         actions={<Button variant="primary" icon="plus" onClick={() => navigate('/afiliados?novo=1')}>Nova loja parceira</Button>} />
 
-      <AutomacaoMl query={query} />
+      <CapturaFavorito />
       <div style={{ height: 16 }} />
+      <AutomacaoMl query={query} />
+      <CapturaDrawer captura={lerCaptura(query.get('captura'))} onClose={() => navigate('/afiliados')} onSaved={parceiros.reload} />
 
       <div className="grid grid-kpi" style={{ marginBottom: 16 }}>
         <Kpi label={`Cliques em ${dias} dias`} value={rel.data ? rel.data.total.toLocaleString('pt-BR') : '—'} icon="external" />
@@ -189,7 +193,10 @@ function AutomacaoMl({ query }: { query: URLSearchParams }) {
   };
 
   const s = st.data;
+  // Sem o app do Mercado Livre configurado no servidor, a captura pelo navegador faz esse papel.
+  if (s && !s.configurado && retorno !== 'erro') return null;
   return (
+    <>
     <Card title="Mercado Livre: importação e robô de preços"
       actions={s?.conectado ? <Badge tone="success">Conectado{s.apelido ? ` · ${s.apelido}` : ''}</Badge> : s ? <Badge tone="warning">Não conectado</Badge> : null}>
       <div className="card-body" style={{ display: 'grid', gap: 16 }}>
@@ -238,5 +245,132 @@ function AutomacaoMl({ query }: { query: URLSearchParams }) {
         )}
       </div>
     </Card>
+    <div style={{ height: 16 }} />
+    </>
+  );
+}
+
+/* ============================== captura pelo navegador ============================== */
+function CapturaFavorito() {
+  const ref = useRef<HTMLAnchorElement>(null);
+  // React bloqueia "javascript:" em href; o favorito precisa disso, então o endereço é posto direto no elemento.
+  useEffect(() => { ref.current?.setAttribute('href', linkDoFavorito()); }, []);
+  return (
+    <Card title="Cadastrar produtos com 1 clique" actions={<Badge tone="success">Mercado Livre · Shein · outras lojas</Badge>}>
+      <div className="card-body captura-fav">
+        <div>
+          <a ref={ref} className="btn btn-primary captura-btn" draggable onClick={(e) => e.preventDefault()}
+            title="Arraste para a barra de favoritos">★ Enviar para a Vetrina</a>
+          <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>Arraste este botão para a barra de favoritos (Ctrl+Shift+B mostra a barra).</p>
+        </div>
+        <ol className="captura-passos">
+          <li>Abra o seu link de afiliado (ex.: <span className="mono">meli.la/…</span>) ou a página do produto.</li>
+          <li>Clique no favorito <strong>Enviar para a Vetrina</strong>.</li>
+          <li>O painel abre com nome, foto e preço. Escolha a categoria e publique. Se o produto já estiver na loja, só o preço é atualizado e entra no histórico.</li>
+        </ol>
+      </div>
+    </Card>
+  );
+}
+
+function CapturaDrawer({ captura, onClose, onSaved }: { captura: Capturado | null; onClose: () => void; onSaved: () => void }) {
+  const toast = useToast();
+  const cats = useAsync(() => api.get<Categoria[]>('/categorias'), []);
+  const ver = useAction();
+  const salvar = useAction();
+  const [v, setV] = useState<CapturaVerificacao | null>(null);
+  const [nome, setNome] = useState('');
+  const [preco, setPreco] = useState<number | ''>('');
+  const [anterior, setAnterior] = useState<number | ''>('');
+  const [link, setLink] = useState('');
+  const [categoriaId, setCategoriaId] = useState('');
+  const chave = captura ? `${captura.urlProduto}|${captura.preco}` : '';
+
+  useEffect(() => {
+    if (!captura) return;
+    setV(null);
+    setNome(captura.nome);
+    setPreco(captura.preco);
+    setAnterior(captura.precoAnterior ?? '');
+    setLink(captura.link);
+    setCategoriaId('');
+    void ver.run(() => api.post<CapturaVerificacao>('/integracoes/captura/verificar',
+      { loja: captura.loja, urlProduto: captura.urlProduto ?? captura.link, codigo: captura.codigo ?? null })).then((r) => {
+      if (!r) return;
+      setV(r);
+      if (r.existente) {
+        if (r.existente.link) setLink(r.existente.link);
+        if (r.existente.categoriaId) setCategoriaId(String(r.existente.categoriaId));
+      }
+    });
+  }, [chave]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!captura) return null;
+  const ex = v?.existente ?? null;
+  const p = preco === '' ? 0 : preco;
+
+  const enviarFoto = async (produtoId: number) => {
+    if (!captura.imagem) return false;
+    try {
+      const r = await fetch(captura.imagem);
+      if (!r.ok) return false;
+      const img = await reduzirImagem(await r.blob(), 1200);
+      const fd = new FormData();
+      fd.append('arquivo', new File([img], 'produto.jpg', { type: img.type || 'image/jpeg' }));
+      await api.upload(`/produtos/${produtoId}/imagem`, fd);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const publicar = async () => {
+    const r = await salvar.run(() => api.post<CapturaResultado>('/integracoes/captura', {
+      loja: captura.loja, nome: nome.trim(), preco: p, precoAnterior: anterior === '' ? null : anterior,
+      freteGratis: captura.freteGratis ?? null, nota: captura.nota ?? null, urlProduto: captura.urlProduto ?? captura.link,
+      codigo: captura.codigo ?? null, linkAfiliado: link.trim(), categoriaId: categoriaId ? Number(categoriaId) : null,
+      detalhes: captura.detalhes ?? null,
+    }));
+    if (!r) return;
+    let foto = r.temFoto;
+    if (!foto) foto = await enviarFoto(r.produtoId);
+    if (r.novo) toast.ok(`${r.nome} publicado na loja${foto ? '' : ' (sem foto: envie em Produtos)'}`);
+    else if (r.precoAntes != null && r.precoAntes !== r.preco) toast.ok(`Preço atualizado: ${money(r.precoAntes)} → ${money(r.preco)}${r.baixou ? ' · selo "Baixou" ligado' : ''}`);
+    else toast.ok(`Preço conferido: continua ${money(r.preco)}`);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Drawer open onClose={onClose} title={ex ? 'Atualizar preço' : 'Publicar produto capturado'}
+      sub={v ? `${v.parceiro}${v.codigo ? ` · ${v.codigo}` : ''}` : 'Conferindo…'}
+      footer={<>
+        <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" icon={ex ? 'refresh' : 'check'} loading={salvar.busy} disabled={!v || !nome.trim() || !p || !link.trim()} onClick={publicar}>
+          {ex ? (ex.preco !== p ? `Atualizar: ${money(ex.preco)} → ${money(p)}` : 'Confirmar preço') : 'Publicar na loja'}
+        </Button>
+      </>}>
+      {ver.error && <Alert>{ver.error}</Alert>}
+      {salvar.error && <div style={{ marginBottom: 12 }}><Alert>{salvar.error}</Alert></div>}
+      {ex && <div style={{ marginBottom: 16 }}><Alert tone="info">Este produto já está na loja (<a href={`#/produtos?id=${ex.produtoId}`}>{ex.nome}</a>). Salvar só atualiza o preço e registra no histórico.</Alert></div>}
+      <div className="captura-prev">
+        {captura.imagem ? <img src={captura.imagem} alt="" referrerPolicy="no-referrer" /> : <div className="captura-sem-foto">sem foto</div>}
+        <div className="form-grid" style={{ flex: 1 }}>
+          <Field label="Nome na loja" className="col-12">{(i) => <Input id={i} value={nome} maxLength={120} disabled={!!ex} onChange={(e) => setNome(e.target.value)} />}</Field>
+          <Field label="Preço" className="col-6">{(i) => <NumberInput id={i} value={preco} onChange={setPreco} />}</Field>
+          <Field label="Preço antes (riscado)" className="col-6" hint="Deixe vazio se não houver desconto.">{(i) => <NumberInput id={i} value={anterior} onChange={setAnterior} />}</Field>
+        </div>
+      </div>
+      <div className="form-grid" style={{ marginTop: 16 }}>
+        <Field label="Seu link de afiliado" className="col-12" hint="É para onde o botão “Ver na loja” leva. Se preferir, cole o link curto (meli.la/…) que você gerou.">
+          {(i) => <Input id={i} type="url" value={link} onChange={(e) => setLink(e.target.value)} />}</Field>
+        <Field label="Categoria na loja" className="col-12">{(i) => (
+          <Select id={i} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
+            <option value="">{ex ? 'Manter a atual' : 'Sem categoria'}</option>
+            {cats.data?.filter((c) => c.ativo).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </Select>)}</Field>
+      </div>
+      {captura.freteGratis && <p className="muted" style={{ marginTop: 12 }}>Frete grátis detectado na página.</p>}
+    </Drawer>
   );
 }

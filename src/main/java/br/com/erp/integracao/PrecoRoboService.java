@@ -116,13 +116,27 @@ public class PrecoRoboService {
         }
         if (o.getCodigoExterno() == null) o.setCodigoExterno(codigo);
         DadosLoja d = ml.consultar(codigo);
-        int r = 0;
         LocalDateTime agora = LocalDateTime.now();
-        if (d.disponivel() && d.preco() != null) {
+        int r = aplicarPreco(o, d.disponivel() ? d.preco() : null, d.precoAnterior(), d.freteGratis(), agora);
+        historico.save(new HistoricoPreco(o, o.getPreco()));
+        o.setVerificadoEm(agora);
+        o.setSincronizadoEm(agora);
+        o.setErroSincronizacao(null);
+        return r;
+    }
+
+    /**
+     * Aplica um preço conferido na oferta (robô, captura pelo navegador ou digitação).
+     * {@code preco == null} quer dizer indisponível. Retorna bits: 1 = preço mudou, 2 = baixou, 4 = ficou indisponível.
+     * Não grava o histórico: quem chama salva {@link HistoricoPreco}.
+     */
+    public static int aplicarPreco(Oferta o, BigDecimal preco, BigDecimal precoAnterior, Boolean freteGratis, LocalDateTime agora) {
+        int r = 0;
+        if (preco != null) {
             BigDecimal antes = o.getPreco();
-            if (antes == null || antes.compareTo(d.preco()) != 0) {
+            if (antes == null || antes.compareTo(preco) != 0) {
                 r |= 1;
-                if (antes != null && d.preco().compareTo(antes) < 0) {
+                if (antes != null && preco.compareTo(antes) < 0) {
                     r |= 2;
                     o.setPrecoBaixouDe(antes);
                     o.setBaixouEm(agora);
@@ -130,24 +144,20 @@ public class PrecoRoboService {
                     o.setPrecoBaixouDe(null);
                     o.setBaixouEm(null);
                 }
-                o.setPreco(d.preco());
+                o.setPreco(preco);
             }
-            o.setPrecoAnterior(d.precoAnterior());
-            if (d.freteGratis() != null) {
-                if (d.freteGratis()) o.setFrete(BigDecimal.ZERO);
+            o.setPrecoAnterior(precoAnterior != null && precoAnterior.compareTo(preco) > 0 ? precoAnterior : null);
+            if (freteGratis != null) {
+                if (freteGratis) o.setFrete(BigDecimal.ZERO);
                 else if (o.getFrete() != null && o.getFrete().signum() == 0) o.setFrete(null);
             }
             if (!o.isDisponivel()) o.setDisponivel(true);
-            // Desconto do Pix e parcelamento não vêm da API: o texto antigo poderia ficar errado.
+            // Desconto do Pix e parcelamento não vêm junto: o texto antigo poderia ficar errado.
             if ((r & 1) != 0 && o.getParcelamento() != null && o.getParcelamento().contains("R$")) o.setParcelamento(null);
         } else {
             if (o.isDisponivel()) r |= 4;
             o.setDisponivel(false);
         }
-        historico.save(new HistoricoPreco(o, o.getPreco()));
-        o.setVerificadoEm(agora);
-        o.setSincronizadoEm(agora);
-        o.setErroSincronizacao(null);
         return r;
     }
 

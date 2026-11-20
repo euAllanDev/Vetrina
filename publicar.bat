@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Manter acordado: pausa de madrugada, das 02h as 08h de Brasilia
+  echo Captura pelo navegador: favorito Enviar para a Vetrina cria o produto ou atualiza o preco, Mercado Livre, Shein e outras lojas
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM

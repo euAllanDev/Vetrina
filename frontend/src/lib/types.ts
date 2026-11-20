@@ -130,6 +130,11 @@ export interface StatusMercadoLivre {
   configurado: boolean; conectado: boolean; apelido: string | null; conectadoEm: string | null;
   ultimaSincronizacao: string | null; ultimoResumo: string | null; agendadorExterno: boolean;
 }
+export interface CapturaVerificacao {
+  loja: string; parceiro: string; codigo: string | null;
+  existente: { produtoId: number; ofertaId: number; nome: string; preco: number; categoriaId: number | null; temFoto: boolean; link: string | null } | null;
+}
+export interface CapturaResultado { produtoId: number; ofertaId: number; nome: string; novo: boolean; preco: number; precoAntes: number | null; baixou: boolean; temFoto: boolean }
 export interface ImportacaoMl { produtoId: number; ofertaId: number; nome: string; preco: number; precoAnterior: number | null; foto: boolean }
 export interface RelatorioCliques {
   dias: number; total: number;

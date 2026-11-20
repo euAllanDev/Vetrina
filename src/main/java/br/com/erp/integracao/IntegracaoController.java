@@ -27,6 +27,7 @@ public class IntegracaoController {
 
     private final MercadoLivreClient ml;
     private final PrecoRoboService robo;
+    private final CapturaService captura;
 
     /** Chave para o agendador externo (GitHub Actions) disparar o robô sem login. */
     @Value("${app.integracoes.cron-key:}")
@@ -124,5 +125,19 @@ public class IntegracaoController {
         Authentication a = SecurityContextHolder.getContext().getAuthentication();
         return a != null && a.isAuthenticated() && a.getAuthorities().stream()
                 .anyMatch(g -> g.getAuthority().equals("ROLE_ADMIN") || g.getAuthority().equals("ROLE_GERENTE"));
+    }
+
+    @Operation(summary = "Confere um produto capturado pelo navegador: loja, código e se já está cadastrado")
+    @PostMapping("/captura/verificar")
+    @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
+    public CapturaService.Verificacao verificarCaptura(@RequestBody CapturaService.CapturaRequest req) {
+        return captura.verificar(req);
+    }
+
+    @Operation(summary = "Publica o produto capturado ou atualiza o preço se já existir")
+    @PostMapping("/captura")
+    @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
+    public CapturaService.CapturaResponse salvarCaptura(@RequestBody CapturaService.CapturaRequest req) {
+        return captura.salvar(req);
     }
 }
