@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { PAINEL } from './lib/painel';
+import { LOJA_FISICA } from './lib/modo';
 import { AuthProvider, useAuth } from './lib/auth';
 import { navigate, useRoute } from './lib/router';
 import { useHotkey } from './lib/hooks';
@@ -50,6 +51,11 @@ function Routes() {
 
   useHotkey((e) => e.key === 'F2', (e) => { if (permitidas.includes('/pdv')) { e.preventDefault(); navigate('/pdv'); } });
 
+  // No modo comparador, telas de loja física (ex.: #/pdv de um favorito antigo) levam à primeira tela do menu.
+  useEffect(() => {
+    if (usuario && !LOJA_FISICA && path !== '/' && path !== '/conta' && !permitidas.includes(path) && permitidas[0]) navigate(permitidas[0]);
+  }, [usuario, path, permitidas]);
+
   // Quem não vê o dashboard cai na primeira tela permitida.
   useEffect(() => {
     if (usuario && path === '/' && !permitidas.includes('/') && permitidas[0]) navigate(permitidas[0]);
@@ -57,7 +63,7 @@ function Routes() {
 
   useEffect(() => {
     const titulo = nav.flatMap((g) => g.items).find((i) => i.path === path)?.label;
-    document.title = titulo ? `${titulo} — ERP` : 'ERP';
+    document.title = titulo ? `${titulo} — Vetrina` : 'Vetrina · painel';
   }, [path, nav]);
 
   if (carregando) return <div style={{ display: 'grid', placeItems: 'center', height: '100vh' }}><span className="spinner" style={{ width: 22, height: 22 }} /></div>;

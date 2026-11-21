@@ -6,6 +6,7 @@ import type { Empresa } from '../lib/types';
 import { Alert, Button, Card, Field, Input, NumberInput, PageHeader, Select, Skeleton } from '../components/ui';
 import { useToast } from '../components/overlay';
 import { enderecoParaApi, PessoaFields, type PessoaForm } from '../components/pessoa';
+import { LOJA_FISICA } from '../lib/modo';
 
 const UFS: Record<string, number> = {
   RO: 11, AC: 12, AM: 13, RR: 14, PA: 15, AP: 16, TO: 17, MA: 21, PI: 22, CE: 23, RN: 24, PB: 25, PE: 26, AL: 27, SE: 28, BA: 29,
@@ -13,6 +14,11 @@ const UFS: Record<string, number> = {
 };
 
 export function EmpresaPage() {
+  if (!LOJA_FISICA) return <EmpresaLoja />;
+  return <EmpresaCompleta />;
+}
+
+function EmpresaCompleta() {
   const { empresa, recarregarEmpresa, pode } = useAuth();
   const toast = useToast();
   const act = useAction();
@@ -69,6 +75,61 @@ export function EmpresaPage() {
           </Card>
           <Alert tone="info">A transmissão para a SEFAZ está em modo simulado. Para emitir de verdade, configure o certificado A1 no backend.</Alert>
         </div>
+      </fieldset>
+    </>
+  );
+}
+
+/** Comparador de afiliados: só o que aparece na loja (nome, contato e cidade). Os dados fiscais ficam como estão. */
+function EmpresaLoja() {
+  const { empresa, recarregarEmpresa, pode } = useAuth();
+  const toast = useToast();
+  const act = useAction();
+  const [f, setF] = useState({ nome: '', email: '', telefone: '', cidade: '', uf: '' });
+
+  useEffect(() => {
+    if (!empresa) return;
+    setF({ nome: empresa.nomeFantasia || empresa.razaoSocial, email: empresa.email ?? '', telefone: empresa.telefone ?? '',
+      cidade: empresa.endereco?.municipio ?? '', uf: empresa.endereco?.uf ?? '' });
+  }, [empresa]);
+
+  if (!empresa) return <><PageHeader title="Empresa" /><Card pad><Skeleton h={240} /></Card></>;
+  const ro = !pode();
+  const uf = f.uf.toUpperCase();
+
+  const salvar = async () => {
+    const nome = f.nome.trim();
+    const body = {
+      razaoSocial: nome || empresa.razaoSocial, nomeFantasia: nome || null, cnpj: empresa.cnpj, inscricaoEstadual: empresa.inscricaoEstadual,
+      inscricaoMunicipal: empresa.inscricaoMunicipal, crt: empresa.crt, telefone: f.telefone.trim() || null, email: f.email.trim() || null,
+      endereco: enderecoParaApi({ ...empresa.endereco, municipio: f.cidade.trim(), uf }) ?? {},
+      codigoUf: UFS[uf] ?? empresa.codigoUf, serieNfe: empresa.serieNfe, proximoNumeroNfe: empresa.proximoNumeroNfe, ambienteNfe: empresa.ambienteNfe,
+    };
+    const r = await act.run(() => api.put<Empresa>('/empresa', body));
+    if (r) { toast.ok('Dados da loja salvos'); recarregarEmpresa(); }
+  };
+
+  return (
+    <>
+      <PageHeader title="Empresa" sub="Nome e contato que aparecem na loja (topo, rodapé e mensagens)."
+        actions={!ro && <Button variant="primary" loading={act.busy} disabled={!f.nome.trim()} onClick={salvar}>Salvar alterações</Button>} />
+      {act.error && <div style={{ marginBottom: 16 }}><Alert>{act.error}</Alert></div>}
+      <fieldset disabled={ro} style={{ border: 0, padding: 0, margin: 0, maxWidth: 720 }}>
+        <Card title="Dados da loja" pad>
+          <div className="form-grid">
+            <Field label="Nome da loja" className="col-12" hint="Aparece no topo da loja, no título das páginas e nas prévias do WhatsApp.">
+              {(i) => <Input id={i} value={f.nome} maxLength={60} onChange={(e) => setF({ ...f, nome: e.target.value })} />}</Field>
+            <Field label="Email de contato" className="col-6" error={act.fieldErrors.email}>
+              {(i) => <Input id={i} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />}</Field>
+            <Field label="Telefone / WhatsApp" className="col-6" error={act.fieldErrors.telefone} hint="Só números, com DDD.">
+              {(i) => <Input id={i} inputMode="tel" value={f.telefone} onChange={(e) => setF({ ...f, telefone: e.target.value.replace(/\D/g, '') })} />}</Field>
+            <Field label="Cidade" className="col-8">{(i) => <Input id={i} value={f.cidade} onChange={(e) => setF({ ...f, cidade: e.target.value })} />}</Field>
+            <Field label="UF" className="col-4">{(i) => (
+              <Select id={i} value={uf} onChange={(e) => setF({ ...f, uf: e.target.value })}>
+                <option value="">—</option>{Object.keys(UFS).sort().map((u) => <option key={u} value={u}>{u}</option>)}
+              </Select>)}</Field>
+          </div>
+        </Card>
       </fieldset>
     </>
   );

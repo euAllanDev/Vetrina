@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Loja: aviso Oferta valida enquanto durarem os estoques, exigido pela KaBuM na Awin
+  echo Painel enxuto: so Afiliados, Produtos, Empresa e Usuarios; telas de loja fisica escondidas e religaveis com VITE_MODO=completo
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as RKeyboardEvent, type ReactNode } from 'react';
+import { LOJA_FISICA } from '../lib/modo';
 import { createPortal } from 'react-dom';
 import { Icon, type IconName } from './icons';
 import { Button } from './ui';
@@ -10,7 +11,7 @@ import { initials, money, ROLE_LABEL } from '../lib/format';
 import type { Cliente, Page, Produto, Role } from '../lib/types';
 
 export interface NavItem { path: string; label: string; icon: IconName; roles: Role[] }
-export const NAV: { group: string; items: NavItem[] }[] = [
+const NAV_COMPLETO: { group: string; items: NavItem[] }[] = [
   { group: 'Operação', items: [
     { path: '/', label: 'Visão geral', icon: 'dashboard', roles: ['GERENTE'] },
     { path: '/pdv', label: 'Ponto de venda', icon: 'pdv', roles: ['GERENTE', 'VENDEDOR'] },
@@ -36,6 +37,20 @@ export const NAV: { group: string; items: NavItem[] }[] = [
     { path: '/usuarios', label: 'Usuários', icon: 'shield', roles: [] },
   ] },
 ];
+
+/** Painel do comparador de afiliados: só o que importa para a vitrine. */
+const NAV_AFILIADOS: { group: string; items: NavItem[] }[] = [
+  { group: 'Vitrine', items: [
+    { path: '/afiliados', label: 'Afiliados e cliques', icon: 'link', roles: ['GERENTE'] },
+    { path: '/produtos', label: 'Produtos', icon: 'package', roles: ['GERENTE', 'VENDEDOR', 'ESTOQUISTA', 'FINANCEIRO'] },
+  ] },
+  { group: 'Configurações', items: [
+    { path: '/empresa', label: 'Empresa', icon: 'building', roles: [] },
+    { path: '/usuarios', label: 'Usuários', icon: 'shield', roles: [] },
+  ] },
+];
+
+export const NAV = LOJA_FISICA ? NAV_COMPLETO : NAV_AFILIADOS;
 
 export function useNav() {
   const { pode } = useAuth();
@@ -93,7 +108,7 @@ export function Shell({ path, children }: { path: string; children: ReactNode })
         </nav>
         <div className="sidebar-foot">
           <a className="nav-item" href="/loja" target="_blank" rel="noopener"><Icon name="store" size={17} />Ver a loja<Icon name="up" size={14} className="muted" style={{ marginLeft: 'auto' }} /></a>
-          {empresa && (
+          {LOJA_FISICA && empresa && (
             <div className="row" style={{ padding: '4px 10px', fontSize: 12 }}>
               <span className={`badge ${empresa.ambienteNfe === 1 ? 'badge-success' : 'badge-warning'}`}>
                 NF-e {empresa.ambienteNfe === 1 ? 'produção' : 'homologação'}
@@ -109,7 +124,7 @@ export function Shell({ path, children }: { path: string; children: ReactNode })
           <Button variant="ghost" className="menu-btn" icon="menu" aria-label="Abrir menu" onClick={() => setMenuOpen(true)} />
           <button className="search-trigger" onClick={() => setPalette(true)} aria-label="Buscar (Ctrl+K)">
             <Icon name="search" size={16} />
-            <span className="search-label">Buscar produto, cliente ou tela</span>
+            <span className="search-label">{LOJA_FISICA ? 'Buscar produto, cliente ou tela' : 'Buscar produto ou tela'}</span>
             <span className="kbd">Ctrl K</span>
           </button>
           <div style={{ marginLeft: 'auto' }} className="row">
@@ -168,7 +183,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
     if (dq.trim().length < 2) { setProds([]); setClis([]); return; }
     let vivo = true;
     api.get<Page<Produto>>('/produtos', { termo: dq, size: 5 }).then((p) => vivo && setProds(p.content)).catch(() => {});
-    api.get<Page<Cliente>>('/clientes', { termo: dq, size: 4 }).then((p) => vivo && setClis(p.content)).catch(() => {});
+    if (LOJA_FISICA) api.get<Page<Cliente>>('/clientes', { termo: dq, size: 4 }).then((p) => vivo && setClis(p.content)).catch(() => {});
     return () => { vivo = false; };
   }, [dq]);
 
@@ -176,10 +191,10 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
   const cmds: Cmd[] = useMemo(() => {
     const term = q.trim().toLowerCase();
     const acoes: Cmd[] = [];
-    if (pode('GERENTE', 'VENDEDOR')) acoes.push({ id: 'a-pdv', group: 'Ações', label: 'Nova venda no balcão', icon: 'pdv', hint: 'F2', run: go('/pdv') });
+    if (LOJA_FISICA && pode('GERENTE', 'VENDEDOR')) acoes.push({ id: 'a-pdv', group: 'Ações', label: 'Nova venda no balcão', icon: 'pdv', hint: 'F2', run: go('/pdv') });
     if (pode('GERENTE', 'ESTOQUISTA')) acoes.push({ id: 'a-prod', group: 'Ações', label: 'Cadastrar produto', icon: 'plus', run: go('/produtos?novo=1') });
-    if (pode('GERENTE', 'VENDEDOR')) acoes.push({ id: 'a-cli', group: 'Ações', label: 'Cadastrar cliente', icon: 'plus', run: go('/clientes?novo=1') });
-    if (pode('GERENTE', 'ESTOQUISTA')) acoes.push({ id: 'a-comp', group: 'Ações', label: 'Novo pedido de compra', icon: 'truck', run: go('/compras?novo=1') });
+    if (LOJA_FISICA && pode('GERENTE', 'VENDEDOR')) acoes.push({ id: 'a-cli', group: 'Ações', label: 'Cadastrar cliente', icon: 'plus', run: go('/clientes?novo=1') });
+    if (LOJA_FISICA && pode('GERENTE', 'ESTOQUISTA')) acoes.push({ id: 'a-comp', group: 'Ações', label: 'Novo pedido de compra', icon: 'truck', run: go('/compras?novo=1') });
     const telas: Cmd[] = nav.flatMap((g) => g.items.map((i) => ({ id: `n-${i.path}`, group: 'Ir para', label: i.label, icon: i.icon, run: go(i.path) })));
     const match = (c: Cmd) => !term || c.label.toLowerCase().includes(term);
     const p: Cmd[] = prods.map((x) => ({ id: `p-${x.id}`, group: 'Produtos', label: `${x.descricao}`, icon: 'package', hint: `${x.codigo} · ${money(x.precoVenda)}`, run: go(`/produtos?id=${x.id}`) }));
@@ -208,7 +223,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
         <div className="palette-input">
           <Icon name="search" size={18} />
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKey}
-            placeholder="Buscar produto, cliente ou tela…" aria-label="Buscar" role="combobox" aria-expanded="true" aria-controls="palette-list" />
+            placeholder={LOJA_FISICA ? 'Buscar produto, cliente ou tela…' : 'Buscar produto ou tela…'} aria-label="Buscar" role="combobox" aria-expanded="true" aria-controls="palette-list" />
           <span className="kbd">Esc</span>
         </div>
         <div className="palette-list" id="palette-list" role="listbox" ref={listRef}>

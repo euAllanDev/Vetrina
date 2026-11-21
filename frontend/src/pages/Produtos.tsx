@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { LOJA_FISICA } from '../lib/modo';
 import { api } from '../lib/api';
 import { useAction, useAsync, useDebounced } from '../lib/hooks';
 import { dateTime, money, ORIGEM_LABEL, qty } from '../lib/format';
@@ -31,11 +32,11 @@ export function Produtos() {
 
   return (
     <>
-      <PageHeader title="Produtos" sub="Cadastro, preços, estoque e dados fiscais."
+      <PageHeader title="Produtos" sub={LOJA_FISICA ? 'Cadastro, preços, estoque e dados fiscais.' : 'Produtos da vitrine, fotos e ofertas das lojas parceiras.'}
         actions={editar && <Button variant="primary" icon="plus" onClick={() => navigate('/produtos?novo=1')}>Novo produto</Button>} />
       <Card>
         <div className="toolbar">
-          <SearchInput value={termo} onChange={(e) => setTermo(e.target.value)} placeholder="Nome, código ou EAN" aria-label="Buscar produtos" />
+          <SearchInput value={termo} onChange={(e) => setTermo(e.target.value)} placeholder={LOJA_FISICA ? 'Nome, código ou EAN' : 'Nome ou código'} aria-label="Buscar produtos" />
           <Select aria-label="Categoria" value={cat} onChange={(e) => setCat(e.target.value)} style={{ width: 200 }}>
             <option value="">Todas as categorias</option>
             {cats.data?.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -47,13 +48,13 @@ export function Produtos() {
         {lista.error ? <ErrorState message={lista.error} onRetry={lista.reload} />
           : !lista.data ? <TableSkeleton cols={6} />
           : lista.data.content.length === 0 ? <Empty icon="package" title={termo ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado'}
-              text={termo ? `Nada corresponde a “${termo}”.` : 'Cadastre o primeiro produto para começar a vender e controlar o estoque.'}
+              text={termo ? `Nada corresponde a “${termo}”.` : LOJA_FISICA ? 'Cadastre o primeiro produto para começar a vender e controlar o estoque.' : 'Use o favorito “Enviar para a Vetrina” (em Afiliados) ou cadastre aqui.'}
               action={editar && !termo && <Button variant="primary" icon="plus" onClick={() => navigate('/produtos?novo=1')}>Novo produto</Button>} />
           : (
             <>
               <div className="table-wrap">
                 <table className="table">
-                  <thead><tr><th>Produto</th><th>Categoria</th><th className="right">Custo</th><th className="right">Preço</th><th className="right">Margem</th><th className="right">Estoque</th></tr></thead>
+                  <thead><tr><th>Produto</th><th>Categoria</th>{LOJA_FISICA && <th className="right">Custo</th>}<th className="right">Preço</th>{LOJA_FISICA && <><th className="right">Margem</th><th className="right">Estoque</th></>}</tr></thead>
                   <tbody>
                     {lista.data.content.map((p) => {
                       const margem = p.precoVenda > 0 ? ((p.precoVenda - p.precoCusto) / p.precoVenda) * 100 : 0;
@@ -64,19 +65,19 @@ export function Produtos() {
                               <ProdutoFoto url={p.imagemUrl} alt="" size={40} />
                               <div>
                                 <div className="cell-title row">{p.descricao}{!p.ativo && <Badge plain>Inativo</Badge>}</div>
-                                <div className="cell-sub mono">{p.codigo}{p.ean ? ` · ${p.ean}` : ''}</div>
+                                <div className="cell-sub mono">{p.codigo}{LOJA_FISICA && p.ean ? ` · ${p.ean}` : ''}</div>
                               </div>
                             </div>
                           </td>
                           <td className="ink-2">{p.categoriaNome ?? '—'}</td>
-                          <td className="right num muted">{money(p.precoCusto)}</td>
+                          {LOJA_FISICA && <td className="right num muted">{money(p.precoCusto)}</td>}
                           <td className="right num" style={{ fontWeight: 500 }}>{money(p.precoVenda)}</td>
-                          <td className="right num ink-2">{margem.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</td>
+                          {LOJA_FISICA && <><td className="right num ink-2">{margem.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</td>
                           <td className="right">
                             {p.estoqueAtual <= 0 ? <Badge tone="danger">{qty(p.estoqueAtual)} {p.unidade}</Badge>
                               : p.abaixoDoMinimo ? <Badge tone="warning">{qty(p.estoqueAtual)} {p.unidade}</Badge>
                               : <span className="num">{qty(p.estoqueAtual)} {p.unidade}</span>}
-                          </td>
+                          </td></>}
                         </tr>
                       );
                     })}
@@ -197,11 +198,13 @@ function ProdutoDrawer({ id, categorias, podeEditar, onClose, onSaved }:
 
   return (
     <Drawer open onClose={onClose} wide title={id ? (p?.descricao ?? 'Produto') : 'Novo produto'}
-      sub={p && <span className="row"><span className="mono">{p.codigo}</span>· {qty(p.estoqueAtual)} {p.unidade} em estoque</span>}
+      sub={p && <span className="row"><span className="mono">{p.codigo}</span>{LOJA_FISICA && <>· {qty(p.estoqueAtual)} {p.unidade} em estoque</>}</span>}
       footer={podeEditar && tab !== 'ofertas' && <><Button onClick={onClose}>Cancelar</Button><Button variant="primary" loading={act.busy} onClick={() => salvar()}>{id ? 'Salvar alterações' : 'Cadastrar produto'}</Button></>}>
       {id && prod.error ? <ErrorState message={prod.error} onRetry={prod.reload} /> : (
         <>
-          <Tabs value={tab} onChange={setTab} tabs={[{ value: 'dados', label: 'Dados gerais' }, { value: 'fiscal', label: 'Fiscal' }, ...(id ? [{ value: 'ofertas' as const, label: 'Ofertas (afiliados)' }, { value: 'historico' as const, label: 'Movimentações' }] : [])]} />
+          <Tabs value={tab} onChange={setTab} tabs={LOJA_FISICA
+            ? [{ value: 'dados', label: 'Dados gerais' }, { value: 'fiscal', label: 'Fiscal' }, ...(id ? [{ value: 'ofertas' as const, label: 'Ofertas (afiliados)' }, { value: 'historico' as const, label: 'Movimentações' }] : [])]
+            : [{ value: 'dados', label: 'Dados gerais' }, ...(id ? [{ value: 'ofertas' as const, label: 'Ofertas das lojas' }] : [])]} />
           {act.error && <div style={{ marginBottom: 16 }}><Alert>{act.error}</Alert></div>}
           <form onSubmit={salvar}>
             <fieldset disabled={ro} style={{ border: 0, padding: 0, margin: 0 }}>
@@ -216,23 +219,27 @@ function ProdutoDrawer({ id, categorias, podeEditar, onClose, onSaved }:
                   </div>
                 </div>
                 <div className="form-grid">
-                  <Field label="Código de barras (EAN)" className="col-6" error={fe.ean}>{(i) => <Input id={i} inputMode="numeric" value={f.ean} onChange={(e) => set('ean')(e.target.value.replace(/\D/g, ''))} />}</Field>
-                  <Field label="Categoria" className="col-4">{(i) => (
+                  {LOJA_FISICA && <Field label="Código de barras (EAN)" className="col-6" error={fe.ean}>{(i) => <Input id={i} inputMode="numeric" value={f.ean} onChange={(e) => set('ean')(e.target.value.replace(/\D/g, ''))} />}</Field>}
+                  <Field label="Categoria" className={LOJA_FISICA ? 'col-4' : 'col-6'}>{(i) => (
                     <Select id={i} value={f.categoriaId} onChange={(e) => set('categoriaId')(e.target.value)}>
                       <option value="">Sem categoria</option>{categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                     </Select>)}</Field>
-                  <Field label="Unidade" className="col-2">{(i) => <Input id={i} value={f.unidade} maxLength={6} onChange={(e) => set('unidade')(e.target.value.toUpperCase())} />}</Field>
+                  {LOJA_FISICA && <Field label="Unidade" className="col-2">{(i) => <Input id={i} value={f.unidade} maxLength={6} onChange={(e) => set('unidade')(e.target.value.toUpperCase())} />}</Field>}
+                  {!LOJA_FISICA && id && <div className="col-6" style={{ alignSelf: 'end', paddingBottom: 8 }}><label className="check"><input type="checkbox" checked={f.ativo} onChange={(e) => set('ativo')(e.target.checked)} />Aparece na loja</label></div>}
                   <div className="form-section">Preço</div>
-                  <Field label="Custo (R$)" className="col-4" hint={id ? 'Recalculado pelo custo médio a cada entrada.' : undefined}>{(i) => <NumberInput id={i} value={f.precoCusto} onChange={set('precoCusto')} />}</Field>
-                  <Field label="Preço de venda (R$)" className="col-4" error={fe.precoVenda}>{(i) => <NumberInput id={i} value={f.precoVenda} onChange={set('precoVenda')} />}</Field>
-                  <div className="field col-4"><span className="field-label">Margem</span><div className="input num" style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)' }}>
-                    {margem === null ? '—' : `${margem.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`}</div></div>
-                  <Field label="Preço anterior na loja (R$)" className="col-4" hint="Opcional. Se maior que o preço de venda, a loja mostra “de/por” e o % de desconto.">{(i) => <NumberInput id={i} value={f.precoAnterior} onChange={set('precoAnterior')} />}</Field>
-                  <Field label="Descrição para a loja" className="col-8" hint="Aparece na página do produto. Uma linha em branco separa parágrafos.">{(i) => <Textarea id={i} rows={3} value={f.detalhes} onChange={(e) => set('detalhes')(e.target.value)} />}</Field>
+                  {LOJA_FISICA && <Field label="Custo (R$)" className="col-4" hint={id ? 'Recalculado pelo custo médio a cada entrada.' : undefined}>{(i) => <NumberInput id={i} value={f.precoCusto} onChange={set('precoCusto')} />}</Field>}
+                  <Field label={LOJA_FISICA ? 'Preço de venda (R$)' : 'Preço de referência (R$)'} className={LOJA_FISICA ? 'col-4' : 'col-6'} error={fe.precoVenda}
+                    hint={LOJA_FISICA ? undefined : 'Na loja vale o preço da oferta mais barata. Este só aparece se não houver oferta.'}>{(i) => <NumberInput id={i} value={f.precoVenda} onChange={set('precoVenda')} />}</Field>
+                  {LOJA_FISICA && <div className="field col-4"><span className="field-label">Margem</span><div className="input num" style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)' }}>
+                    {margem === null ? '—' : `${margem.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`}</div></div>}
+                  <Field label="Preço anterior na loja (R$)" className={LOJA_FISICA ? 'col-4' : 'col-6'} hint="Opcional. Se maior que o preço de venda, a loja mostra “de/por” e o % de desconto.">{(i) => <NumberInput id={i} value={f.precoAnterior} onChange={set('precoAnterior')} />}</Field>
+                  <Field label="Descrição para a loja" className={LOJA_FISICA ? 'col-8' : 'col-12'} hint="Aparece na página do produto. Uma linha em branco separa parágrafos.">{(i) => <Textarea id={i} rows={3} value={f.detalhes} onChange={(e) => set('detalhes')(e.target.value)} />}</Field>
+                  {LOJA_FISICA && <>
                   <div className="form-section">Estoque</div>
                   {!id && <Field label="Estoque inicial" className="col-4" hint="Gera uma entrada no histórico.">{(i) => <NumberInput id={i} step="0.001" value={f.estoqueInicial} onChange={set('estoqueInicial')} />}</Field>}
                   <Field label="Estoque mínimo" className="col-4" hint="Abaixo disso o produto aparece em alerta.">{(i) => <NumberInput id={i} step="0.001" value={f.estoqueMinimo} onChange={set('estoqueMinimo')} />}</Field>
                   {id && <div className="col-8" style={{ alignSelf: 'center' }}><label className="check"><input type="checkbox" checked={f.ativo} onChange={(e) => set('ativo')(e.target.checked)} />Produto ativo (aparece no PDV)</label></div>}
+                  </>}
                 </div>
                 </>
               )}
