@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Loja: pagina de Natal em /loja/s/natal com presentes por pessoa e contagem regressiva, selecoes tematicas, lista Ordenar legivel no modo escuro, robo de precos sem agenda
+  echo Loja: Natal maior no menu com gorro de Natal na ultima letra
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM

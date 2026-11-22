@@ -121,6 +121,15 @@
 }
 .s-nav a:hover::after, .s-nav a.hover::after, .s-nav a[aria-current="page"]::after { transform: scaleX(1); }
 .s-nav a.sale { color: var(--s-sale); }
+/* Natal no menu: maior, com gorro na última letra */
+.s-nav a.natal, .s-nav-regua span.natal { font-size: 19px; font-weight: 700; letter-spacing: .01em; }
+.s-com-chapeu { display: inline-flex; align-items: baseline; }
+.s-chapeu-letra { position: relative; display: inline-block; }
+.s-chapeu { position: absolute; width: 1em; height: auto; left: 50%; bottom: 77%; transform: translateX(-38%) rotate(14deg); transform-origin: 30% 90%; pointer-events: none; filter: drop-shadow(0 1px 1px rgba(0,0,0,.12)); }
+.s-nav a.natal:hover .s-chapeu { animation: s-chapeu-balanca 900ms var(--s-ease); }
+@keyframes s-chapeu-balanca { 0%, 100% { transform: translateX(-38%) rotate(14deg); } 30% { transform: translateX(-38%) rotate(2deg); } 60% { transform: translateX(-38%) rotate(20deg); } }
+@media (prefers-reduced-motion: reduce) { .s-nav a.natal:hover .s-chapeu { animation: none; } }
+.s-menu nav a.natal .s-chapeu { width: .85em; bottom: 92%; }
 .s-head-tools { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
 .s-only-mobile { display: none; }
 

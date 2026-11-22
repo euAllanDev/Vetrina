@@ -284,10 +284,10 @@ function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu
   const temNovos = dados?.produtos.some((p) => p.novo);
 
   // Menu "prioridade +": mostra os itens que cabem e joga o resto em "Mais".
-  type ItemNav = { k: string; t: string; r: Rota; mega: number; atual: boolean; sale?: boolean };
+  type ItemNav = { k: string; t: string; r: Rota; mega: number; atual: boolean; sale?: boolean; natal?: boolean };
   const natal = SELECOES.find((x) => x.especial === 'natal' && naEpoca(x));
   const itens: ItemNav[] = [
-    ...(natal && dados ? [{ k: 'natal', t: 'Natal', r: { s: natal.slug }, mega: -1, atual: rota.s === natal.slug, sale: true }] : []),
+    ...(natal && dados ? [{ k: 'natal', t: 'Natal', r: { s: natal.slug }, mega: -1, atual: rota.s === natal.slug, sale: true, natal: true }] : []),
     ...(temNovos ? [{ k: 'nov', t: 'Novidades', r: { v: 'novidades' as const }, mega: -1, atual: rota.v === 'novidades' }] : []),
     ...(dados?.categorias ?? []).map((c) => ({ k: `c${c.id}`, t: c.nome, r: { c: c.id }, mega: c.id, atual: rota.c === c.id })),
   ];
@@ -333,9 +333,9 @@ function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu
         <nav className="s-nav" aria-label="Categorias" ref={navRef}>
           {visiveis.map((x) => (
             <a key={x.k} href={urlDe(x.r)} aria-current={x.atual ? 'page' : undefined}
-              className={`${x.sale ? 'sale' : ''} ${mega === x.mega && x.mega > 0 ? 'hover' : ''}`}
+              className={`${x.sale ? 'sale' : ''} ${x.natal ? 'natal' : ''} ${mega === x.mega && x.mega > 0 ? 'hover' : ''}`}
               onMouseEnter={() => entrar(x.mega)} onFocus={() => setMega(null)}
-              onClick={(e) => { e.preventDefault(); setMega(null); ir(x.r); }}>{x.t}</a>
+              onClick={(e) => { e.preventDefault(); setMega(null); ir(x.r); }}>{x.natal ? <ComChapeu texto={x.t} /> : x.t}</a>
           ))}
           {sobra.length > 0 && (
             <button type="button" className={`s-nav-mais ${mega === MAIS ? 'hover' : ''}`} aria-haspopup="true" aria-expanded={mega === MAIS}
@@ -349,7 +349,7 @@ function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu
           )}
           {/* régua invisível: mede a largura de cada item para decidir quantos cabem */}
           <div className="s-nav-regua" aria-hidden="true" ref={reguaRef}>
-            {itens.map((x) => <span key={x.k}>{x.t}</span>)}
+            {itens.map((x) => <span key={x.k} className={x.natal ? 'natal' : undefined}>{x.t}</span>)}
             <span>Mais ⌄</span>
             {ofertas && <span>{ofertas.t}</span>}
           </div>
@@ -480,10 +480,29 @@ function Busca({ dados, ir, abrir, inicial: ini }: { dados: Catalogo; ir: (r: Ro
   );
 }
 
+/** Palavra com um gorro de Natal na última letra (o gorro é só enfeite, leitores de tela leem a palavra normal). */
+function ComChapeu({ texto }: { texto: string }) {
+  return (
+    <span className="s-com-chapeu">
+      {texto.slice(0, -1)}
+      <span className="s-chapeu-letra">
+        {texto.slice(-1)}
+        <svg className="s-chapeu" viewBox="0 0 32 28" aria-hidden="true">
+          <path d="M5 21 C7 11 13 4 21 4 C25 4 28 7 29 11 C26 9 23 9 22 12 C21 15 23 18 24 21 Z" fill="#d30005" />
+          <path d="M14 6 C17 5 20 5 22 6" stroke="#a80004" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity=".6" />
+          <rect x="2" y="19" width="25" height="7" rx="3.5" fill="#fff" stroke="#e5e5e5" strokeWidth=".8" />
+          <circle cx="28.5" cy="12" r="3.3" fill="#fff" stroke="#e5e5e5" strokeWidth=".8" />
+        </svg>
+      </span>
+    </span>
+  );
+}
+
 /* ============================== menu mobile ============================== */
 function MenuMobile({ dados, ir, onFechar }: { dados: Catalogo; ir: (r: Rota) => void; onFechar: () => void }) {
   const itens: { t: string; r: Rota; k?: string }[] = [
     { t: 'Início', r: {} },
+    ...SELECOES.filter((s) => s.especial === 'natal' && naEpoca(s)).map((s) => ({ t: 'Natal', r: { s: s.slug }, k: 'sale natal' })),
     ...(dados.produtos.some((p) => p.novo) ? [{ t: 'Novidades', r: { v: 'novidades' as const } }] : []),
     ...dados.categorias.map((c) => ({ t: c.nome, r: { c: c.id } })),
     ...(dados.produtos.some(emOferta) ? [{ t: 'Ofertas', r: { v: 'ofertas' as const }, k: 'sale' }] : []),
@@ -499,7 +518,7 @@ function MenuMobile({ dados, ir, onFechar }: { dados: Catalogo; ir: (r: Rota) =>
         <nav>
           {itens.map((x, n) => (
             <a key={x.t} href={urlDe(x.r)} className={x.k} style={{ ['--i' as string]: n }} onClick={(e) => { e.preventDefault(); ir(x.r); }}>
-              {x.t}<Seta />
+              {x.k?.includes('natal') ? <ComChapeu texto={x.t} /> : x.t}<Seta />
             </a>
           ))}
         </nav>
