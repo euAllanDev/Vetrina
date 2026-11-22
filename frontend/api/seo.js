@@ -1,6 +1,7 @@
 // Páginas da loja com título, descrição, foto e preço já no HTML.
 // O WhatsApp, o Instagram e o Google leem isso sem rodar JavaScript; o visitante recebe a mesma página e o app abre normal.
 import { catalogo, emOferta, esc, money, origemDe, urlImagem, urlProduto } from './_comum.js';
+import { SELECOES, produtosDaSelecao } from './_selecoes.js';
 
 let shell = null;
 async function paginaBase(o) {
@@ -63,6 +64,20 @@ function montar(o, q, d) {
       titulo: `${p.nome} por ${money(p.preco)}${off} | ${loja}`,
       desc: corta(`${money(p.preco)}${emOferta(p) ? ` (antes ${money(p.precoAnterior)})` : ''} ${onde}. ${p.detalhes || ''} Compare preços e veja o histórico na ${loja}.`, 200),
       url, img, tipo: 'product', indexar: true, ld: [ld, trilha], preco: p.preco,
+    };
+  }
+
+  const sel = q.s && SELECOES.find((x) => x.slug === q.s);
+  if (sel) {
+    const l = produtosDaSelecao(sel, ativos);
+    const url = `${o}/loja/s/${sel.slug}`;
+    const top = l.slice(0, 3).map((x) => `${corta(x.nome, 40)} por ${money(x.preco)}${emOferta(x) && x.desconto ? ` (-${x.desconto}%)` : ''}`);
+    return {
+      ...base, titulo: `${sel.titulo} | ${loja}`,
+      desc: corta(top.length ? `${top.join(' · ')}${l.length > 3 ? ` e mais ${l.length - 3}` : ''}. ${sel.desc}` : sel.desc, 200),
+      url, img: urlImagem(o, capa(l)), indexar: l.length > 0,
+      ld: l.length ? [{ '@context': 'https://schema.org', '@type': 'ItemList', name: sel.titulo, url,
+        itemListElement: l.slice(0, 20).map((x, i) => ({ '@type': 'ListItem', position: i + 1, url: urlProduto(o, x.id), name: x.nome })) }] : [],
     };
   }
 

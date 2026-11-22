@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react';
+import { SELECOES, naEpoca } from '../../api/_selecoes.js';
 import { Icon } from '../components/icons';
 import { money, onlyDigits } from '../lib/format';
 import { Home } from './Home';
@@ -144,12 +145,14 @@ export function Store() {
     const nome = dados?.loja.nome ?? 'Loja';
     const cat = dados?.categorias.find((c) => c.id === rota.c);
     const lj = dados?.parceiros?.find((x) => x.id === rota.l);
-    document.title = produto ? `${produto.nome} — ${nome}` : rota.v === 'favoritos' ? `Meus favoritos — ${nome}` : lj ? `${lj.nome} — ${nome}` : cat ? `${cat.nome} — ${nome}` : rota.q ? `Busca: ${rota.q} — ${nome}` : nome;
+    const sel = rota.s ? SELECOES.find((x) => x.slug === rota.s) : undefined;
+    document.title = produto ? `${produto.nome} — ${nome}` : sel ? `${sel.titulo} — ${nome}` : rota.v === 'favoritos' ? `Meus favoritos — ${nome}` : lj ? `${lj.nome} — ${nome}` : cat ? `${cat.nome} — ${nome}` : rota.q ? `Busca: ${rota.q} — ${nome}` : nome;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#ffffff');
     // Mantém descrição e endereço canônico em dia ao navegar (a primeira carga já vem pronta do servidor).
     if (!dados) return;
     const desc = produto
       ? `${produto.nome} por ${money(produto.preco)}${emOferta(produto) && produto.desconto ? ` (${produto.desconto}% off)` : ''}. Compare preços e veja o histórico na ${nome}.`
+      : sel ? sel.desc
       : `Compare preços, veja o histórico e encontre as melhores ofertas na ${nome}.`;
     let m = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     if (!m) { m = document.createElement('meta'); m.name = 'description'; document.head.append(m); }
@@ -189,7 +192,7 @@ export function Store() {
     : rota.p ? (produto
       ? <Pdp key={produto.id} p={produto} dados={dados} naSacola={sacola[produto.id] ?? 0} ir={ir} onAbrir={abrir} onAdicionar={adicionar} />
       : <div className="s-vazio"><span className="s-display sm">Produto indisponível</span><p>Este produto não está mais na vitrine.</p><button className="s-btn" onClick={() => ir({})}>Voltar à loja</button></div>)
-    : (rota.c || rota.q || rota.v || rota.l) ? <Lista dados={dados} rota={rota} ir={ir} onAbrir={abrir} onAdicionar={adicionar} />
+    : (rota.c || rota.q || rota.v || rota.l || rota.s) ? <Lista dados={dados} rota={rota} ir={ir} onAbrir={abrir} onAdicionar={adicionar} />
     : <Home dados={dados} ir={ir} onAbrir={abrir} onAdicionar={adicionar} />;
 
   return (
@@ -282,7 +285,9 @@ function Cabecalho({ dados, rota, ir, abrir, qtd, bump, bagRef, onSacola, onMenu
 
   // Menu "prioridade +": mostra os itens que cabem e joga o resto em "Mais".
   type ItemNav = { k: string; t: string; r: Rota; mega: number; atual: boolean; sale?: boolean };
+  const natal = SELECOES.find((x) => x.especial === 'natal' && naEpoca(x));
   const itens: ItemNav[] = [
+    ...(natal && dados ? [{ k: 'natal', t: 'Natal', r: { s: natal.slug }, mega: -1, atual: rota.s === natal.slug, sale: true }] : []),
     ...(temNovos ? [{ k: 'nov', t: 'Novidades', r: { v: 'novidades' as const }, mega: -1, atual: rota.v === 'novidades' }] : []),
     ...(dados?.categorias ?? []).map((c) => ({ k: `c${c.id}`, t: c.nome, r: { c: c.id }, mega: c.id, atual: rota.c === c.id })),
   ];

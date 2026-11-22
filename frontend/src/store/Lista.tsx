@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SELECOES, diasAte, produtosDaSelecao, produtosDoGrupo, selecoesAtivas } from '../../api/_selecoes.js';
 import { money } from '../lib/format';
-import { Card, CompartilharLista, MarcaLoja, useFavoritos, baixou, ehAfiliado, emOferta, freteGratis, transicao, urlDe, type Abrir, type Adicionar, type Catalogo, type Rota } from './shared';
+import { Card, CompartilharLista, Trilho, MarcaLoja, useFavoritos, baixou, ehAfiliado, emOferta, freteGratis, transicao, urlDe, type Abrir, type Adicionar, type Catalogo, type Rota } from './shared';
 
 type Ordem = 'relevancia' | 'menor' | 'maior' | 'az' | 'desconto';
 const ORDENS: { v: Ordem; t: string }[] = [
@@ -32,7 +33,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
   const sentinela = useRef<HTMLDivElement>(null);
 
   // Ao trocar de página da loja, recomeça os filtros.
-  useEffect(() => { setSoOferta(rota.v === 'ofertas'); setFaixa(null); setSoDisp(false); setSoFrete(false); setLojasSel([]); setOrdem('relevancia'); }, [rota.c, rota.q, rota.v, rota.l]);
+  useEffect(() => { setSoOferta(rota.v === 'ofertas'); setFaixa(null); setSoDisp(false); setSoFrete(false); setLojasSel([]); setOrdem('relevancia'); }, [rota.c, rota.q, rota.v, rota.l, rota.s]);
 
   useEffect(() => {
     const el = sentinela.current;
@@ -42,6 +43,8 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
     return () => io.disconnect();
   }, []);
 
+  const sel = rota.s ? SELECOES.find((x) => x.slug === rota.s) : undefined;
+  const outrasSel = useMemo(() => (sel ? selecoesAtivas(dados.produtos).filter((x) => x.slug !== sel.slug) : []), [dados, sel]);
   const cat = dados.categorias.find((c) => c.id === rota.c);
   const lojaRota = dados.parceiros?.find((x) => x.id === rota.l);
   const termo = rota.q?.trim() ?? '';
@@ -50,6 +53,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
 
   const base = useMemo(() => {
     let l = dados.produtos;
+    if (sel) l = produtosDaSelecao(sel, l);
     if (cat) l = l.filter((p) => p.categoriaId === cat.id);
     if (lojaRota) l = l.filter((p) => p.ofertas?.some((o) => o.parceiroId === lojaRota.id));
     if (rota.v === 'novidades') l = l.filter((p) => p.novo);
@@ -60,7 +64,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
       l = l.filter((p) => { const alvo = semAcento(`${p.nome} ${p.categoriaNome ?? ''} ${p.codigo}`); return t.every((x) => alvo.includes(x)); });
     }
     return l;
-  }, [dados, cat, lojaRota, rota.v, termo, favs]);
+  }, [dados, sel, cat, lojaRota, rota.v, termo, favs]);
 
   const lista = useMemo(() => {
     const f = FAIXAS.find((x) => x.id === faixa);
@@ -72,12 +76,12 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
     else if (ordem === 'maior') s.sort((a, b) => b.preco - a.preco);
     else if (ordem === 'az') s.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     else if (ordem === 'desconto') s.sort((a, b) => (b.desconto ?? 0) - (a.desconto ?? 0));
-    else s.sort((a, b) => Number(b.disponivel) - Number(a.disponivel) || Number(b.maisVendido) - Number(a.maisVendido) || Number(b.novo) - Number(a.novo));
+    else if (!sel) s.sort((a, b) => Number(b.disponivel) - Number(a.disponivel) || Number(b.maisVendido) - Number(a.maisVendido) || Number(b.novo) - Number(a.novo));
     return s;
-  }, [base, soOferta, soDisp, faixa, ordem, soFrete, lojasSel]);
+  }, [base, sel, soOferta, soDisp, faixa, ordem, soFrete, lojasSel]);
 
   const faixasUteis = FAIXAS.filter((f) => base.some((p) => p.preco >= f.min && p.preco < f.max));
-  const titulo = termo ? `“${termo}”` : lojaRota ? lojaRota.nome : cat ? cat.nome : rota.v === 'ofertas' ? 'Ofertas' : rota.v === 'novidades' ? 'Novidades' : rota.v === 'baixou' ? 'Baixaram de preço' : favoritos ? 'Meus favoritos' : 'Todos os produtos';
+  const titulo = termo ? `“${termo}”` : sel ? sel.titulo : lojaRota ? lojaRota.nome : cat ? cat.nome : rota.v === 'ofertas' ? 'Ofertas' : rota.v === 'novidades' ? 'Novidades' : rota.v === 'baixou' ? 'Baixaram de preço' : favoritos ? 'Meus favoritos' : 'Todos os produtos';
   const filtros = Number(soOferta) + Number(soDisp) + Number(!!faixa) + Number(soFrete) + lojasSel.length;
   const mudar = (fn: () => void) => transicao(fn);
   const limpar = () => mudar(() => { setSoOferta(false); setSoDisp(false); setFaixa(null); setSoFrete(false); setLojasSel([]); });
@@ -86,24 +90,81 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
   const temFrete = base.some(freteGratis);
   const precos = lista.map((p) => p.preco);
 
+  if (sel?.grupos) {
+    const dias = diasAte(sel);
+    const grupos = sel.grupos.map((g) => ({ g, l: produtosDoGrupo(g, dados.produtos) })).filter((x) => x.l.length > 0);
+    return (
+      <div className={`s-lista s-especial ${sel.especial ?? ''}`}>
+        <header className="s-lista-head s-especial-head">
+          <nav className="s-crumbs" aria-label="Você está em">
+            <a href="/loja" onClick={(e) => { e.preventDefault(); ir({}); }}>Início</a>
+            <span>/</span>
+            <span aria-current="page">{sel.titulo}</span>
+          </nav>
+          {dias != null && dias > 0 && <span className="s-especial-kicker">Faltam {dias} {dias === 1 ? 'dia' : 'dias'} para o Natal</span>}
+          {dias === 0 && <span className="s-especial-kicker">Feliz Natal!</span>}
+          <h1 className="s-display xl">
+            {sel.titulo.split(' ').map((w, k) => <span key={k} className="w" style={{ ['--d' as string]: k }}><span>{w}</span></span>)}
+          </h1>
+          <p className="s-lista-sub">{sel.sub}</p>
+          <p className="s-lista-meta">Antes de comprar, confira na loja o prazo de entrega para o presente chegar a tempo.</p>
+          <CompartilharLista titulo={sel.titulo} loja={dados.loja.nome} produtos={base} rota={rota} />
+          {grupos.length > 1 && (
+            <div className="s-chips cats" role="list" aria-label="Ir para">
+              {grupos.map(({ g, l }, k) => (
+                <a role="listitem" key={g.titulo} href={`#grupo-${k}`} className="s-chip"
+                  onClick={(e) => { e.preventDefault(); document.getElementById(`grupo-${k}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+                  {g.titulo}<sup>{l.length}</sup>
+                </a>
+              ))}
+            </div>
+          )}
+        </header>
+        {grupos.length === 0 ? (
+          <div className="s-vazio">
+            <span className="s-display sm">Em breve</span>
+            <p>Estamos separando os presentes. Volte daqui a pouco.</p>
+            <button className="s-btn" onClick={() => ir({ v: 'ofertas' })}>Ver ofertas</button>
+          </div>
+        ) : grupos.map(({ g, l }, k) => (
+          <div key={g.titulo} id={`grupo-${k}`} className="s-especial-grupo">
+            <Trilho titulo={g.titulo} sub={g.sub}>
+              {l.map((p, i) => <Card key={p.id} p={p} i={i} onAbrir={onAbrir} onAdicionar={onAdicionar} />)}
+            </Trilho>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="s-lista">
       <header className="s-lista-head">
         <nav className="s-crumbs" aria-label="Você está em">
           <a href="/loja" onClick={(e) => { e.preventDefault(); ir({}); }}>Início</a>
           <span>/</span>
+          {sel && <><a href={urlDe({ v: 'ofertas' })} onClick={(e) => { e.preventDefault(); ir({ v: 'ofertas' }); }}>Ofertas</a><span>/</span></>}
           {lojaRota && <><a href={urlDe({ v: 'todos' })} onClick={(e) => { e.preventDefault(); ir({ v: 'todos' }); }}>Lojas parceiras</a><span>/</span></>}
           <span aria-current="page">{termo ? 'Busca' : titulo}</span>
         </nav>
         <h1 key={titulo} className="s-display xl">
           {titulo.split(' ').map((w, k) => <span key={k} className="w" style={{ ['--d' as string]: k }}><span>{w}</span></span>)}
         </h1>
+        {sel && <p className="s-lista-sub">{sel.sub}</p>}
         <p className="s-lista-meta">
           {lista.length} {lista.length === 1 ? 'produto' : 'produtos'}
           {precos.length > 1 && ` · de ${money(Math.min(...precos))} a ${money(Math.max(...precos))}`}
         </p>
         {!termo && <CompartilharLista titulo={rota.v === 'ofertas' ? 'Ofertas de hoje' : titulo} loja={dados.loja.nome} produtos={lista} rota={rota} />}
-        {!termo && !lojaRota && !favoritos && (
+        {sel && outrasSel.length > 0 && (
+          <div className="s-chips cats" role="list" aria-label="Outras seleções">
+            {outrasSel.map((x) => (
+              <a role="listitem" key={x.slug} href={urlDe({ s: x.slug })} className="s-chip"
+                onClick={(e) => { e.preventDefault(); ir({ s: x.slug }); }}>{x.titulo}<sup>{x.produtos.length}</sup></a>
+            ))}
+          </div>
+        )}
+        {!termo && !lojaRota && !favoritos && !sel && (
           <div className="s-chips cats" role="list">
             <a role="listitem" href={urlDe({ v: 'todos' })} className="s-chip" aria-current={!cat && rota.v !== 'ofertas' && rota.v !== 'novidades'}
               onClick={(e) => { e.preventDefault(); ir({ v: 'todos' }); }}>Tudo</a>
@@ -154,7 +215,7 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
       ) : lista.length === 0 ? (
         <div className="s-vazio">
           <span className="s-display sm">Nada por aqui</span>
-          <p>{termo ? `Nenhum produto encontrado para “${termo}”.` : 'Nenhum produto com esses filtros.'}</p>
+          <p>{termo ? `Nenhum produto encontrado para “${termo}”.` : sel && filtros === 0 ? 'Esta seleção está sem produtos agora. Os preços mudam todo dia, volte mais tarde.' : 'Nenhum produto com esses filtros.'}</p>
           {filtros > 0 ? <button className="s-btn" onClick={limpar}>Limpar filtros</button>
             : <button className="s-btn" onClick={() => ir({ v: 'todos' })}>Ver todos os produtos</button>}
         </div>

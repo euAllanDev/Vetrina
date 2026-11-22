@@ -20,6 +20,10 @@
       "destination": "/api/seo?p=:id"
     },
     {
+      "source": "/loja/s/:slug",
+      "destination": "/api/seo?s=:slug"
+    },
+    {
       "source": "/loja",
       "destination": "/api/seo"
     },

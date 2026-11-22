@@ -2,9 +2,11 @@
 # Precisa do segredo CRON_KEY em Settings > Secrets and variables > Actions (mesmo valor da variável CRON_KEY no Render).
 name: Atualizar precos
 
+# Agenda desligada: o Mercado Livre não liberou criar app nesta conta, então o robô não tem como
+# ler os preços pela API (os preços entram pela captura no painel). Para religar, volte as duas linhas:
+#   schedule:
+#     - cron: "17 */6 * * *"   # a cada 6 horas (horário UTC)
 on:
-  schedule:
-    - cron: "17 */6 * * *"   # a cada 6 horas (horário UTC)
   workflow_dispatch: {}      # botão "Run workflow" para rodar na hora
 
 jobs:

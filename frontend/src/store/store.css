@@ -5,6 +5,7 @@
    vermelho só para preço de oferta. Movimento com propósito.
    ============================================================ */
 .s-root {
+  color-scheme: light; /* a loja é sempre clara: listas nativas (select) não ficam escuras com texto escuro */
   --s-bg: #ffffff;
   --s-soft: #f5f5f5;
   --s-soft-2: #ececec;
@@ -318,6 +319,7 @@
 .s-cat:hover img { transform: scale(1.06); }
 .s-cat-txt { position: absolute; z-index: 1; left: 22px; right: 22px; bottom: 22px; display: grid; gap: 8px; }
 .s-cat-nome { font: 400 clamp(32px, 3.2vw, 46px)/0.95 var(--s-display); text-transform: uppercase; }
+.s-cat.sel .s-cat-nome { font-size: clamp(26px, 2.4vw, 34px); }
 .s-cat-cta { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; font-size: 14px; }
 .s-cat-cta svg { transition: transform 300ms var(--s-ease); }
 .s-cat:hover .s-cat-cta svg { transform: translateX(4px); }
@@ -351,6 +353,12 @@
 .s-crumbs [aria-current] { color: var(--s-ink); }
 .s-crumbs.pad { padding: 24px var(--s-pad) 0; margin-bottom: 18px; }
 .s-lista-meta { color: var(--s-ink-2); margin-top: 14px; font-size: 15px; }
+.s-promo.natal { background: #7a0f14; }
+.s-promo.natal .s-promo-txt .s-display { font-size: clamp(52px, 6.4vw, 108px); }
+.s-especial-kicker { display: inline-block; margin-bottom: 14px; padding: 6px 12px; border-radius: 999px; background: var(--s-sale); color: #fff; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+.s-especial-grupo { scroll-margin-top: 80px; }
+.s-especial .s-trilho:last-child { padding-bottom: clamp(48px, 7vw, 88px); }
+.s-lista-sub { margin-top: 12px; font-size: 17px; color: var(--s-ink); max-width: 60ch; }
 .s-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .s-chips.cats { margin-top: 22px; }
 .s-chip {
@@ -371,6 +379,7 @@
 .s-toolbar .s-chips::-webkit-scrollbar { display: none; }
 .s-ordem { position: relative; display: flex; align-items: center; gap: 8px; flex: none; font-size: 14px; font-weight: 500; }
 .s-ordem span { color: var(--s-ink-2); }
+.s-root option { background: #fff; color: #111; }
 .s-ordem select { appearance: none; border: 0; background: none; font: 500 15px var(--s-sans); color: var(--s-ink); padding: 8px 22px 8px 0; cursor: pointer; }
 .s-ordem svg { position: absolute; right: 0; pointer-events: none; }
 .s-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px 16px; padding: 16px var(--s-pad) 0; }

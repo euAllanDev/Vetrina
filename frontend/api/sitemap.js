@@ -1,4 +1,5 @@
 import { catalogo, esc, origemDe, urlImagem, urlProduto } from './_comum.js';
+import { selecoesAtivas } from './_selecoes.js';
 
 export default async function handler(req, res) {
   const o = origemDe(req);
@@ -9,6 +10,7 @@ export default async function handler(req, res) {
   const urls = [
     `<url><loc>${o}/loja</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${o}/loja?v=ofertas</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
+    ...selecoesAtivas(d.produtos).map((s) => `<url><loc>${o}/loja/s/${s.slug}</loc><changefreq>daily</changefreq><priority>0.85</priority></url>`),
     ...d.categorias.map((c) => `<url><loc>${o}/loja?c=${c.id}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`),
     ...d.produtos.map((p) => {
       const conferido = (p.ofertas || []).map((x) => x.verificadoEm).filter(Boolean).sort().pop();

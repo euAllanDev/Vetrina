@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { diasAte, selecoesAtivas } from '../../api/_selecoes.js';
 import { Card, Foto, MarcaLoja, Seta, Trilho, baixou, ehAfiliado, emOferta, reduzMovimento, urlDe, useRevela, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
 
 /** Frases de campanha por categoria (as que não estiverem aqui usam o próprio nome). */
@@ -44,6 +45,8 @@ export function Home({ dados, ir, onAbrir, onAdicionar }: Props) {
 
       <Passos comparador={produtos.some(ehAfiliado)} />
 
+      <BannerNatal dados={dados} ir={ir} />
+
       {baixaram.length > 0 && (
         <Trilho titulo="Baixaram de preço" sub="O robô encontrou estes preços menores nos últimos dias"
           acao={<a className="s-link-strong" href={urlDe({ v: 'baixou' })} onClick={(e) => { e.preventDefault(); ir({ v: 'baixou' }); }}>Ver tudo</a>}>
@@ -58,6 +61,8 @@ export function Home({ dados, ir, onAbrir, onAdicionar }: Props) {
       </Trilho>
 
       <Categorias dados={dados} capa={(id) => doCat(id)[0]} ir={ir} />
+
+      <Selecoes dados={dados} ir={ir} />
 
       {(dados.parceiros?.length ?? 0) > 0 && <Parceiros dados={dados} ir={ir} />}
 
@@ -214,6 +219,28 @@ function Categorias({ dados, capa, ir }: { dados: Catalogo; capa: (id: number) =
   );
 }
 
+/* ============================== seleções ============================== */
+function Selecoes({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
+  const sels = useMemo(() => selecoesAtivas(dados.produtos).filter((s) => !s.grupos)
+    .map((s) => ({ s, p: s.produtos.find((x) => x.imagemUrl) }))
+    .filter((x) => x.p), [dados]);
+  if (!sels.length) return null;
+  return (
+    <Trilho titulo="Seleções" sub="Listas prontas, atualizadas sozinhas com os preços do dia">
+      {sels.map(({ s, p }, n) => (
+        <a key={s.slug} href={urlDe({ s: s.slug })} className="s-cat sel" style={{ ['--i' as string]: n }}
+          onClick={(e) => { e.preventDefault(); ir({ s: s.slug }); }}>
+          <Foto p={p!} />
+          <div className="s-cat-txt">
+            <span className="s-cat-nome">{s.titulo}</span>
+            <span className="s-cat-cta">{s.produtos.length} {s.produtos.length === 1 ? 'produto' : 'produtos'} <Seta size={16} /></span>
+          </div>
+        </a>
+      ))}
+    </Trilho>
+  );
+}
+
 /* ============================== lojas parceiras ============================== */
 function Parceiros({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
   const [ref, visto] = useRevela<HTMLElement>();
@@ -258,6 +285,31 @@ function BannerOfertas({ ofertas, ir }: { ofertas: Produto[]; ir: (r: Rota) => v
         </h2>
         <p>{ofertas.length} {ofertas.length === 1 ? 'produto com preço reduzido' : 'produtos com preço reduzido'}, enquanto durar o estoque.</p>
         <a className="s-btn light" href={urlDe({ v: 'ofertas' })} onClick={(e) => { e.preventDefault(); ir({ v: 'ofertas' }); }}>Ver ofertas</a>
+      </div>
+    </section>
+  );
+}
+
+/* ============================== natal ============================== */
+function BannerNatal({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
+  const [ref, visto] = useRevela<HTMLElement>();
+  const natal = useMemo(() => selecoesAtivas(dados.produtos).find((s) => s.especial === 'natal'), [dados]);
+  if (!natal) return null;
+  const dias = diasAte(natal);
+  const fotos = natal.produtos.filter((p) => p.imagemUrl && p.disponivel).slice(0, 2);
+  const palavras = ['Presentes', 'de', 'Natal'];
+  return (
+    <section className={`s-promo natal ${visto ? 'in' : ''}`} ref={ref}>
+      <div className="s-promo-fotos">
+        {fotos.map((p) => <Foto key={p.id} p={p} />)}
+      </div>
+      <div className="s-promo-txt">
+        <span className="s-slide-kicker">{dias ? `Faltam ${dias} ${dias === 1 ? 'dia' : 'dias'}` : 'Feliz Natal'}</span>
+        <h2 className="s-display">
+          {palavras.map((w, k) => <span key={k}><span className="w" style={{ ['--d' as string]: k }}><span>{w}</span></span>{' '}</span>)}
+        </h2>
+        <p>Ideias separadas para ele, para ela, para quem joga e para o amigo secreto, com o preço comparado.</p>
+        <a className="s-btn light" href={urlDe({ s: natal.slug })} onClick={(e) => { e.preventDefault(); ir({ s: natal.slug }); }}>Ver presentes</a>
       </div>
     </section>
   );
