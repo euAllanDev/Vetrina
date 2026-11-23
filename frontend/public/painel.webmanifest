@@ -1,0 +1,26 @@
+{
+  "id": "/gestao-vt7",
+  "name": "Vetrina Gestão",
+  "short_name": "Vetrina ADM",
+  "description": "Suba produtos compartilhando o link da loja e acompanhe os cliques da Vetrina.",
+  "lang": "pt-BR",
+  "start_url": "/gestao-vt7#/celular",
+  "scope": "/gestao-vt7",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "/gestao-vt7",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  },
+  "shortcuts": [
+    { "name": "Adicionar produto", "url": "/gestao-vt7#/celular?aba=adicionar", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

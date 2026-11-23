@@ -28,6 +28,8 @@ public class IntegracaoController {
     private final MercadoLivreClient ml;
     private final PrecoRoboService robo;
     private final CapturaService captura;
+    private final LeitorDeLink leitor;
+    private final br.com.erp.produto.ProdutoImagemService imagens;
 
     /** Chave para o agendador externo (GitHub Actions) disparar o robô sem login. */
     @Value("${app.integracoes.cron-key:}")
@@ -139,5 +141,37 @@ public class IntegracaoController {
     @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
     public CapturaService.CapturaResponse salvarCaptura(@RequestBody CapturaService.CapturaRequest req) {
         return captura.salvar(req);
+    }
+
+    public record LerLink(String link) {
+    }
+
+    @Operation(summary = "Lê um link de loja (inclusive meli.la e onelink da Shein) e devolve nome, preço e foto, para o app do celular")
+    @PostMapping("/captura/ler")
+    @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
+    public LeitorDeLink.Lido lerLink(@RequestBody LerLink req) {
+        if (req == null || req.link() == null || req.link().isBlank()) throw new NegocioException("Cole o link do produto");
+        return leitor.ler(req.link().trim());
+    }
+
+    public record FotoDoLink(Long produtoId, String imagem) {
+    }
+
+    public record FotoSalva(boolean ok) {
+    }
+
+    @Operation(summary = "Baixa a foto do produto direto da loja e salva no produto")
+    @PostMapping("/captura/foto")
+    @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
+    public FotoSalva fotoDoLink(@RequestBody FotoDoLink req) {
+        if (req == null || req.produtoId() == null) throw new NegocioException("Produto não informado");
+        byte[] dados = leitor.baixarFoto(req.imagem());
+        if (dados == null) return new FotoSalva(false);
+        try {
+            imagens.salvarBytes(req.produtoId(), dados);
+            return new FotoSalva(true);
+        } catch (NegocioException e) {
+            return new FotoSalva(false);
+        }
     }
 }

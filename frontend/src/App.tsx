@@ -23,6 +23,8 @@ import { EmpresaPage } from './pages/Empresa';
 import { Usuarios } from './pages/Usuarios';
 import { Conta } from './pages/Conta';
 import { Afiliados } from './pages/Afiliados';
+import { Celular } from './pages/Celular';
+import { receberDoCompartilhar } from './lib/compartilhado';
 import { Store } from './store/Store';
 
 const PAGES: Record<string, () => ReactNode> = {
@@ -52,22 +54,33 @@ function Routes() {
   useHotkey((e) => e.key === 'F2', (e) => { if (permitidas.includes('/pdv')) { e.preventDefault(); navigate('/pdv'); } });
 
   // No modo comparador, telas de loja física (ex.: #/pdv de um favorito antigo) levam à primeira tela do menu.
+  const celular = path === '/celular';
+
+  // No celular (tela estreita ou app instalado), o painel abre direto no app do celular.
   useEffect(() => {
-    if (usuario && !LOJA_FISICA && path !== '/' && path !== '/conta' && !permitidas.includes(path) && permitidas[0]) navigate(permitidas[0]);
+    const estreito = window.matchMedia('(max-width: 720px)').matches || window.matchMedia('(display-mode: standalone)').matches;
+    if (estreito && !window.location.hash) navigate('/celular');
+  }, []);
+
+  useEffect(() => {
+    if (usuario && !LOJA_FISICA && !celular && path !== '/' && path !== '/conta' && !permitidas.includes(path) && permitidas[0]) navigate(permitidas[0]);
   }, [usuario, path, permitidas]);
 
   // Quem não vê o dashboard cai na primeira tela permitida.
   useEffect(() => {
     if (usuario && path === '/' && !permitidas.includes('/') && permitidas[0]) navigate(permitidas[0]);
   }, [usuario, path, permitidas]);
+  // (o app do celular tem layout próprio, sem o menu lateral do painel)
 
   useEffect(() => {
     const titulo = nav.flatMap((g) => g.items).find((i) => i.path === path)?.label;
-    document.title = titulo ? `${titulo} — Vetrina` : 'Vetrina · painel';
-  }, [path, nav]);
+    document.title = celular ? 'Vetrina · gestão' : titulo ? `${titulo} — Vetrina` : 'Vetrina · painel';
+  }, [path, nav, celular]);
 
   if (carregando) return <div style={{ display: 'grid', placeItems: 'center', height: '100vh' }}><span className="spinner" style={{ width: 22, height: 22 }} /></div>;
   if (!usuario) return <Login />;
+
+  if (celular) return <Celular />;
 
   const page = PAGES[path];
   const allowed = path === '/conta' || permitidas.includes(path);
@@ -90,6 +103,7 @@ export function App() {
     window.location.replace('/loja');
     return null;
   }
+  prepararAppDoPainel();
   return (
     <AuthProvider>
       <ToastProvider>
@@ -97,4 +111,19 @@ export function App() {
       </ToastProvider>
     </AuthProvider>
   );
+}
+
+/**
+ * O painel vira um app instalável próprio ("Vetrina Gestão"), separado do app da loja:
+ * troca o manifesto, liga o service worker e recebe o que vier pelo "Compartilhar" do Android.
+ */
+let preparado = false;
+function prepararAppDoPainel() {
+  if (preparado) return;
+  preparado = true;
+  receberDoCompartilhar();
+  const manifesto = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+  if (manifesto) manifesto.href = '/painel.webmanifest';
+  document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', 'Vetrina ADM');
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* sem app instalável, segue normal */ });
 }

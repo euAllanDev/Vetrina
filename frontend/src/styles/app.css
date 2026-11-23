@@ -451,10 +451,13 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
   width: 112px; height: 140px; object-fit: contain; flex: none; border-radius: var(--r-md);
   border: 1px solid var(--hairline); background: #fff;
 }
+.captura-foto { position: relative; flex: none; display: grid; gap: 6px; justify-items: center; cursor: pointer; }
+.captura-foto-btn { font-size: 12px; font-weight: 500; color: var(--primary-ink, var(--ink)); text-decoration: underline; text-underline-offset: 2px; }
 .captura-sem-foto { display: grid; place-items: center; color: var(--ink-3); font-size: 12px; background: var(--surface-2); }
 @media (max-width: 720px) {
   .captura-fav { grid-template-columns: 1fr; }
-  .captura-prev { flex-direction: column; }
+  .captura-prev { flex-direction: column; align-items: stretch; }
+  .captura-prev .form-grid { width: 100%; }
 }
 .captura-juntar { border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 12px; margin: 16px 0 0; display: grid; gap: 8px; }
 .captura-juntar legend { font-weight: 600; padding: 0 6px; font-size: 13px; }
@@ -464,3 +467,59 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .captura-opcao input { margin-top: 3px; }
 .captura-opcao span { display: grid; gap: 2px; }
 .captura-opcao small { color: var(--ink-3); font-size: 12px; }
+
+/* ============================== app do celular (#/celular) ============================== */
+.cel { min-height: 100dvh; background: var(--canvas); display: flex; flex-direction: column; }
+.cel-top {
+  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: calc(env(safe-area-inset-top) + 12px) 16px 12px; background: var(--surface); border-bottom: 1px solid var(--hairline);
+}
+.cel-marca { font-weight: 700; font-size: 18px; letter-spacing: -0.3px; }
+.cel-sub { color: var(--ink-3); font-size: 12px; }
+.cel-main { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); }
+.cel-stack { display: grid; gap: 14px; }
+.cel-stack > .btn { height: 48px; font-size: 15px; }
+.cel-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cel-kpi { display: grid; gap: 2px; padding: 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--hairline); }
+.cel-kpi span { color: var(--ink-3); font-size: 12px; }
+.cel-kpi strong { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.cel-kpi small { color: var(--ink-3); font-size: 11.5px; }
+.cel-kpi.destaque { grid-column: 1 / -1; background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.cel-kpi.destaque span, .cel-kpi.destaque small { color: color-mix(in srgb, var(--surface) 70%, transparent); }
+.cel-kpi.destaque strong { font-size: 40px; }
+.cel-card { padding: 16px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--hairline); min-width: 0; }
+.cel-card h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; }
+.cel-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.cel-card-head h2 { margin: 0; }
+.cel-card.dica { background: var(--surface-2); }
+.cel-lista { list-style: none; margin: 0; padding: 0; display: grid; }
+.cel-lista li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--hairline); }
+.cel-lista li:first-child { border-top: 0; padding-top: 2px; }
+.cel-lista a { display: grid; gap: 2px; min-width: 0; color: inherit; text-decoration: none; }
+.cel-lista .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.cel-lista .muted { font-size: 12px; }
+.cel-lista strong { font-variant-numeric: tabular-nums; }
+.cel-lista.simples li { display: grid; gap: 2px; justify-content: stretch; }
+.cel-barras { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cel-barras li { display: grid; grid-template-columns: minmax(0, 1.2fr) 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.cel-barras li > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cel-barras strong { font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; }
+.cel-texto { width: 100%; height: auto; min-height: 96px; padding: 10px 12px; resize: vertical; font-size: 16px; line-height: 1.4; }
+.cel-botoes { display: flex; gap: 8px; margin-top: 10px; }
+.cel-botoes .btn { flex: 1; height: 46px; font-size: 15px; }
+.cel-passos { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.cel-instalar { text-align: center; font-size: 12.5px; margin: 4px 0 0; }
+.cel-esqueleto { height: 120px; border-radius: var(--r-md); background: var(--surface-2); animation: cel-pulso 1.4s ease-in-out infinite; }
+@keyframes cel-pulso { 50% { opacity: .55; } }
+.cel-tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: 1fr 1fr;
+  padding: 6px 12px calc(env(safe-area-inset-bottom) + 6px); background: var(--surface); border-top: 1px solid var(--hairline);
+}
+.cel-tabs button { display: grid; justify-items: center; gap: 2px; padding: 6px 0; border: 0; background: none; color: var(--ink-3); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; border-radius: var(--r-md); }
+.cel-tabs button.on { color: var(--ink); }
+.cel-tabs button.on svg { color: var(--accent-ink); }
+@media (max-width: 600px) {
+  .drawer { width: 100vw; }
+  .drawer-foot { padding-bottom: calc(env(safe-area-inset-bottom) + 14px); }
+  .drawer-foot .btn { flex: 1; height: 46px; }
+}
