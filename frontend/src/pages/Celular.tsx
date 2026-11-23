@@ -185,7 +185,7 @@ function Adicionar({ inicial }: { inicial: string | null }) {
     setAvisos(l.avisos.filter((a) => !(tx.preco && /preço/i.test(a)) && !(tx.nome && /nome/i.test(a))));
     setCaptura({
       loja: l.loja, nome: l.nome ?? tx.nome ?? '', preco, precoAnterior: anterior, freteGratis: l.freteGratis ?? undefined,
-      nota: l.nota, imagem: l.imagem ?? undefined, urlProduto: l.urlProduto ?? tx.link, codigo: l.codigo,
+      nota: l.nota, imagem: l.imagem ?? undefined, urlProduto: l.urlProduto && !l.urlProduto.includes('/social/') ? l.urlProduto : tx.link, codigo: l.codigo,
       detalhes: l.detalhes ?? undefined, link: tx.link,
     });
   };

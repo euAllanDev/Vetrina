@@ -94,6 +94,9 @@ public class LeitorDeLink {
             if (destino != null) enderecoProduto = destino;
         }
 
+        // Sem o produto achado, o link curto é o endereço (o código sai dele).
+        if (enderecoProduto.contains("/social/")) enderecoProduto = link;
+
         Dados d = extrair(pg.html());
         if (pg.url().contains("/social/")) {
             // O perfil mostra vários produtos: "frete grátis" e "preço antes" ali podem ser de outro.
@@ -250,6 +253,17 @@ public class LeitorDeLink {
      */
     static String produtoEmDestaqueMl(String html, String nome) {
         String h = desescapar(html);
+        // O primeiro card do perfil ("polycards") é o produto do link compartilhado.
+        int ini = h.indexOf("\"polycards\"");
+        int meta = ini < 0 ? -1 : h.indexOf("\"metadata\"", ini);
+        if (meta > 0 && meta - ini < 3000) {
+            int prox = h.indexOf("\"unique_id\"", meta);
+            String bloco = h.substring(meta, Math.min(h.length(), prox > meta ? prox : meta + 2000));
+            Matcher prod = Pattern.compile("\"product_id\"\\s*:\\s*\"(MLB\\d+)\"").matcher(bloco);
+            if (prod.find()) return "https://www.mercadolivre.com.br/p/" + prod.group(1);
+            Matcher item = Pattern.compile("\"id\"\\s*:\\s*\"MLB(\\d+)\"").matcher(bloco);
+            if (item.find()) return "https://produto.mercadolivre.com.br/MLB-" + item.group(1);
+        }
         Set<String> alvo = palavras(nome);
         String melhor = null;
         int melhorPontos = 0;
