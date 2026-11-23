@@ -50,10 +50,13 @@ class LeitorDeLinkTest {
     }
 
     @Test
-    void achaOProdutoEmDestaqueNoPerfilSocial() {
-        String html = "<a href=\"https:\\u002F\\u002Fwww.mercadolivre.com.br\\u002Foutro\\u002Fp\\u002FMLB111\">x</a>"
-                + "<a href=\"https://www.mercadolivre.com.br/azzaro/p/MLB3821589?x=1&amp;c_id=/home/card-featured/element\">";
-        assertTrue(LeitorDeLink.produtoEmDestaqueMl(html).startsWith("https://www.mercadolivre.com.br/azzaro/p/MLB3821589"));
+    void achaOProdutoDoLinkNoPerfilSocial() {
+        String html = "<a href=\"https:\\u002F\\u002Fwww.mercadolivre.com.br\\u002Fcreatina-growth\\u002Fp\\u002FMLB111?x=1\">x</a>"
+                + "<a href=\"https://www.mercadolivre.com.br/c/livros?ref=MLB999\">c</a>"
+                + "<a href=\"https://www.mercadolivre.com.br/perfume-masculino-azzaro-pour-homme-100-ml/p/MLB3821589?x=1\">";
+        assertEquals("https://www.mercadolivre.com.br/perfume-masculino-azzaro-pour-homme-100-ml/p/MLB3821589",
+                LeitorDeLink.produtoEmDestaqueMl(html, "Perfume Masculino Azzaro Pour Homme 100 ml"));
+        assertNull(LeitorDeLink.produtoEmDestaqueMl(html, "Notebook Gamer"));
     }
 
     @Test

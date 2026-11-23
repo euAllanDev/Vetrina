@@ -76,7 +76,7 @@ public class LeitorDeLink {
         // Se a página do produto não abrir, o próprio perfil já traz nome, preço e foto no título de compartilhamento.
         String enderecoProduto = pg.url();
         if ("mercadolivre".equals(loja) && pg.url().contains("/social/")) {
-            String produto = produtoEmDestaqueMl(pg.html());
+            String produto = produtoEmDestaqueMl(pg.html(), extrair(pg.html()).nome);
             if (produto != null) {
                 enderecoProduto = produto;
                 URI u = uri(produto);
@@ -95,7 +95,11 @@ public class LeitorDeLink {
         }
 
         Dados d = extrair(pg.html());
-        if (pg.url().contains("/social/")) d.frete = null; // o perfil mostra vários produtos: "frete grátis" ali não é deste
+        if (pg.url().contains("/social/")) {
+            // O perfil mostra vários produtos: "frete grátis" e "preço antes" ali podem ser de outro.
+            d.frete = null;
+            d.anterior = null;
+        }
         String urlProduto = limparUrl(enderecoProduto, loja);
         String imagem = melhorarFoto(d.imagem);
         if (d.nome == null) avisos.add("Não achei o nome do produto na página.");
@@ -237,24 +241,37 @@ public class LeitorDeLink {
     /* ============================== Mercado Livre ============================== */
 
     private static final Pattern ML_PRODUTO = Pattern.compile(
-            "https?://(?:www\\.)?(?:produto\\.)?mercadoli(?:vre|bre)\\.com(?:\\.br)?/[^\"'\\s<>]*?(?:/p/MLB\\d+|MLB-?\\d+)[^\"'\\s<>]*");
+            "https?://(?:www\\.)?mercadoli(?:vre|bre)\\.com(?:\\.br)?/[A-Za-z0-9%_\\-]+/(?:p|up)/MLBU?\\d+"
+            + "|https?://produto\\.mercadoli(?:vre|bre)\\.com(?:\\.br)?/MLB-\\d+[A-Za-z0-9%_\\-]*");
 
-    /** No perfil social, o card em destaque aponta para o produto do link; senão, o primeiro produto da página. */
-    static String produtoEmDestaqueMl(String html) {
+    /**
+     * No perfil social aparecem vários produtos; o do link é o que tem o nome do título de compartilhamento.
+     * Escolhe o endereço cujo trecho de texto mais se parece com esse nome.
+     */
+    static String produtoEmDestaqueMl(String html, String nome) {
         String h = desescapar(html);
-        String primeiro = null;
+        Set<String> alvo = palavras(nome);
+        String melhor = null;
+        int melhorPontos = 0;
         Matcher m = ML_PRODUTO.matcher(h);
         while (m.find()) {
             String u = m.group();
-            if (primeiro == null) primeiro = u;
-            if (u.contains("card-featured")) return u;
+            int pontos = 0;
+            for (String w : palavras(u.replace('-', ' ').replace('/', ' '))) if (alvo.contains(w)) pontos++;
+            if (pontos > melhorPontos) {
+                melhorPontos = pontos;
+                melhor = u;
+            }
         }
-        int destaque = h.indexOf("poly-card--xlarge");
-        if (destaque >= 0) {
-            m = ML_PRODUTO.matcher(h);
-            if (m.find(destaque)) return m.group();
-        }
-        return primeiro;
+        return melhorPontos >= 2 ? melhor : null;
+    }
+
+    private static Set<String> palavras(String s) {
+        Set<String> r = new java.util.HashSet<>();
+        if (s == null) return r;
+        String t = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT);
+        for (String w : t.split("[^a-z0-9]+")) if (w.length() >= 3) r.add(w);
+        return r;
     }
 
     /* ============================== leitura genérica ============================== */
