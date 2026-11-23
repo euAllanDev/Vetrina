@@ -73,20 +73,30 @@ public class LeitorDeLink {
         if (loja == null) loja = loja(link);
 
         // Perfil social do Mercado Livre (o que abre pelo meli.la): o produto em destaque leva à página dele.
+        // Se a página do produto não abrir, o próprio perfil já traz nome, preço e foto no título de compartilhamento.
+        String enderecoProduto = pg.url();
         if ("mercadolivre".equals(loja) && pg.url().contains("/social/")) {
             String produto = produtoEmDestaqueMl(pg.html());
             if (produto != null) {
+                enderecoProduto = produto;
                 URI u = uri(produto);
                 Pagina pdp = u == null ? null : abrir(u);
-                if (pdp != null) pg = pdp;
-                else avisos.add("Não deu para abrir a página do produto no Mercado Livre.");
-            } else {
-                avisos.add("Não achei o produto em destaque na página do Mercado Livre.");
+                if (pdp != null) {
+                    Dados teste = extrair(pdp.html());
+                    if (teste.nome != null && teste.preco != null) pg = pdp;
+                }
             }
         }
 
+        // Link curto da Shein (onelink): a página só tem nome e foto; o código do produto aparece no endereço final.
+        if ("shein".equals(loja) && !SHEIN_PRODUTO.matcher(enderecoProduto).find()) {
+            String destino = destinoShein(link);
+            if (destino != null) enderecoProduto = destino;
+        }
+
         Dados d = extrair(pg.html());
-        String urlProduto = limparUrl(pg.url(), loja);
+        if (pg.url().contains("/social/")) d.frete = null; // o perfil mostra vários produtos: "frete grátis" ali não é deste
+        String urlProduto = limparUrl(enderecoProduto, loja);
         String imagem = melhorarFoto(d.imagem);
         if (d.nome == null) avisos.add("Não achei o nome do produto na página.");
         if (d.preco == null) avisos.add("Não achei o preço na página. Confira e preencha.");
@@ -187,6 +197,43 @@ public class LeitorDeLink {
         return html.contains("og:title") || html.contains("application/ld+json");
     }
 
+    /* ============================== Shein ============================== */
+
+    private static final Pattern SHEIN_PRODUTO = Pattern.compile("-p-\\d+", Pattern.CASE_INSENSITIVE);
+
+    /** Segue o onelink com forceRed=1 (versão web) só pelos redirecionamentos, até o endereço com o código do produto. */
+    private String destinoShein(String link) {
+        URI atual = uri(link.contains("?") ? link.replaceFirst("\\?", "?forceRed=1&") : link + "?forceRed=1");
+        for (int salto = 0; salto < 8 && atual != null; salto++) {
+            if (SHEIN_PRODUTO.matcher(atual.toString()).find()) return atual.toString();
+            if (!permitido(atual.getHost(), SITES)) return null;
+            try {
+                HttpResponse<InputStream> r = http.send(HttpRequest.newBuilder(atual).timeout(Duration.ofSeconds(10))
+                        .header("User-Agent", NAVEGADOR).header("Accept", "text/html").GET().build(), HttpResponse.BodyHandlers.ofInputStream());
+                int st = r.statusCode();
+                if (st >= 300 && st < 400) {
+                    String loc = r.headers().firstValue("location").orElse(null);
+                    r.body().close();
+                    if (loc == null) return null;
+                    atual = atual.resolve(loc.replace(" ", "%20"));
+                    continue;
+                }
+                byte[] b = st == 200 ? limitado(r.body(), MAX_PAGINA) : null;
+                if (st != 200) r.body().close();
+                if (b == null) return null;
+                String html = desescapar(new String(b, StandardCharsets.UTF_8));
+                Matcher m = Pattern.compile("https?://[a-z.]*shein\\.com[^\"'\\s<>]*-p-\\d+[^\"'\\s<>]*", Pattern.CASE_INSENSITIVE).matcher(html);
+                if (m.find()) return m.group();
+                String refresh = redirecionamentoNaPagina(html);
+                atual = refresh == null ? null : atual.resolve(refresh);
+            } catch (Exception e) {
+                log.info("Onelink da Shein não resolvido: {}", e.getMessage());
+                return null;
+            }
+        }
+        return null;
+    }
+
     /* ============================== Mercado Livre ============================== */
 
     private static final Pattern ML_PRODUTO = Pattern.compile(
@@ -222,6 +269,7 @@ public class LeitorDeLink {
     private static final Pattern ANTES_ML = Pattern.compile("aria-label=\"(?:Antes|Preço anterior):\\s*([\\d.]+)\\s*reais(?:\\s*com\\s*(\\d+)\\s*centavos)?", Pattern.CASE_INSENSITIVE);
     private static final Pattern SHEIN_VENDA = Pattern.compile("\"salePrice\"\\s*:\\s*\\{[^}]*?\"amount\"\\s*:\\s*\"([\\d.]+)\"");
     private static final Pattern SHEIN_CHEIO = Pattern.compile("\"retailPrice\"\\s*:\\s*\\{[^}]*?\"amount\"\\s*:\\s*\"([\\d.]+)\"");
+    private static final Pattern NOME_COM_PRECO = Pattern.compile("\\s*[-–]\\s*R\\$\\s*([\\d.]+(?:,\\d{2})?)\\s*$");
     private static final Pattern FRETE = Pattern.compile("frete gr[aá]tis|envio gr[aá]tis|chegar[aá] gr[aá]tis", Pattern.CASE_INSENSITIVE);
 
     Dados extrair(String html) {
@@ -259,8 +307,18 @@ public class LeitorDeLink {
             if (s.find()) d.anterior = numero(s.group(1));
         }
         if (FRETE.matcher(html).find()) d.frete = true;
-        if (d.nome != null) d.nome = limparNome(d.nome);
+        if (d.nome != null) {
+            // Títulos de compartilhamento do Mercado Livre: "Nome do produto - R$ 72,60".
+            Matcher np = NOME_COM_PRECO.matcher(d.nome.trim());
+            if (np.find()) {
+                if (d.preco == null) d.preco = numero(np.group(1).replace(".", "").replace(",", "."));
+                d.nome = d.nome.trim().substring(0, np.start());
+            }
+            d.nome = limparNome(d.nome);
+        }
         if (d.descricao == null) d.descricao = cortar(meta(html, "og:description"), 1500);
+        // "Olha o que eu encontrei! …" é o texto de compartilhamento, não a descrição do produto.
+        if (d.descricao != null && d.descricao.toLowerCase(Locale.ROOT).startsWith("olha o que eu encontrei")) d.descricao = null;
         return d;
     }
 

@@ -92,6 +92,7 @@ public class CapturaService {
     private static final Pattern SHEIN_ID = Pattern.compile("-p-(\\d+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern SHOPEE_ID = Pattern.compile("i\\.(\\d+)\\.(\\d+)|/product/(\\d+)/(\\d+)");
     private static final Pattern ALI_ID = Pattern.compile("/item/(\\d+)");
+    private static final Pattern LINK_CURTO = Pattern.compile("(?:onelink\\.shein\\.com/\\d+|meli\\.la|shp\\.ee|s\\.shopee\\.com\\.br|s\\.click\\.aliexpress\\.com/e)/([A-Za-z0-9_-]{5,40})");
     private static final Pattern KABUM_ID = Pattern.compile("/produto/(\\d+)");
 
     /** Código do produto na loja, tirado do endereço (ou o que veio do navegador). */
@@ -110,6 +111,11 @@ public class CapturaService {
             case ALIEXPRESS -> grupo(ALI_ID.matcher(url), codigo);
             case KABUM -> grupo(KABUM_ID.matcher(url), codigo);
         };
+        if (c == null || c.isBlank()) {
+            // Sem código na página (ex.: link curto que a loja não deixou abrir): usa o próprio link curto como código.
+            Matcher curto = LINK_CURTO.matcher(url);
+            c = curto.find() ? "L" + curto.group(1) : null;
+        }
         if (c == null || c.isBlank()) return null;
         c = c.trim().toUpperCase(Locale.ROOT);
         return c.length() > 40 ? c.substring(0, 40) : c;

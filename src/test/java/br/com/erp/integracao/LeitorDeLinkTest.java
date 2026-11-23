@@ -40,6 +40,16 @@ class LeitorDeLinkTest {
     }
 
     @Test
+    void separaOPrecoDoTituloDeCompartilhamento() {
+        String html = "<meta property=\"og:title\" content=\"Orygens Arad Eau de Parfum 100ml Masculino - R$ 1.072,60\">"
+                + "<meta property=\"og:description\" content=\"Olha o que eu encontrei! Orygens no Mercado Livre.\">";
+        LeitorDeLink.Dados d = leitor.extrair(html);
+        assertEquals("Orygens Arad Eau de Parfum 100ml Masculino", d.nome);
+        assertEquals(new BigDecimal("1072.60"), d.preco);
+        assertNull(d.descricao);
+    }
+
+    @Test
     void achaOProdutoEmDestaqueNoPerfilSocial() {
         String html = "<a href=\"https:\\u002F\\u002Fwww.mercadolivre.com.br\\u002Foutro\\u002Fp\\u002FMLB111\">x</a>"
                 + "<a href=\"https://www.mercadolivre.com.br/azzaro/p/MLB3821589?x=1&amp;c_id=/home/card-featured/element\">";
