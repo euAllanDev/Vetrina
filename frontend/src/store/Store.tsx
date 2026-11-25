@@ -142,7 +142,7 @@ export function Store() {
   const produto = dados && rota.p ? dados.produtos.find((p) => p.id === rota.p) : undefined;
 
   useEffect(() => {
-    const nome = dados?.loja.nome ?? 'Loja';
+    const nome = dados?.loja.nome ?? 'Vetrina';
     const cat = dados?.categorias.find((c) => c.id === rota.c);
     const lj = dados?.parceiros?.find((x) => x.id === rota.l);
     const sel = rota.s ? SELECOES.find((x) => x.slug === rota.s) : undefined;

@@ -98,6 +98,13 @@ public class LeitorDeLink {
         if (enderecoProduto.contains("/social/")) enderecoProduto = link;
 
         Dados d = extrair(pg.html());
+        // Página genérica da Shopee (pede login): o título e a foto são da loja, não do produto.
+        if (d.nome != null && d.nome.toLowerCase(Locale.ROOT).startsWith("shopee brasil")) {
+            d.nome = null;
+            d.imagem = null;
+            d.descricao = null;
+            avisos.add("A Shopee só mostra o produto para quem está logado. Cole a mensagem inteira do Compartilhar (ela traz nome e preço) e escolha a foto.");
+        }
         if (pg.url().contains("/social/")) {
             // O perfil mostra vários produtos: "frete grátis" e "preço antes" ali podem ser de outro.
             d.frete = null;

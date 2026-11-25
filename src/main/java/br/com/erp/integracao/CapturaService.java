@@ -90,7 +90,7 @@ public class CapturaService {
     }
 
     private static final Pattern SHEIN_ID = Pattern.compile("-p-(\\d+)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern SHOPEE_ID = Pattern.compile("i\\.(\\d+)\\.(\\d+)|/product/(\\d+)/(\\d+)");
+    private static final Pattern SHOPEE_ID = Pattern.compile("i\\.(\\d+)\\.(\\d+)|/(?:product|opaanlp)/(\\d+)/(\\d+)");
     private static final Pattern ALI_ID = Pattern.compile("/item/(\\d+)");
     private static final Pattern LINK_CURTO = Pattern.compile("(?:onelink\\.shein\\.com/\\d+|meli\\.la|shp\\.ee|s\\.shopee\\.com\\.br|s\\.click\\.aliexpress\\.com/e)/([A-Za-z0-9_-]{5,40})");
     private static final Pattern KABUM_ID = Pattern.compile("/produto/(\\d+)");

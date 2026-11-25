@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Leitura de link: produto do meli.la pelo primeiro card do perfil social; sem produto, o link curto vira o codigo
+  echo Icone do site com a marca Vetrina e titulo da aba; Shopee: codigo pelo endereco opaanlp e aviso quando a pagina pede login
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM
