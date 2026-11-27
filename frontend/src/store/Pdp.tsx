@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { money } from '../lib/format';
 import { HistoricoPreco, Ofertas } from './Comparador';
+import { Anuncio } from './anuncios';
 import { AvisoPreco } from './avisos';
 import { Card, Compartilhar, Coracao, MarcaLoja, Preco, Selos, Seta, Trilho, ehAfiliado, haQuanto, naLoja, inicial, limiteDe, linkOferta, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
 
@@ -176,6 +177,8 @@ export function Pdp({ p, dados, naSacola, ir, onAbrir, onAdicionar }: Props) {
       </div>
 
       {afiliado && <HistoricoPreco produtoId={p.id} />}
+
+      <Anuncio posicao="PRODUTO" />
 
       {(afiliado ? !!melhor : p.disponivel) && (
         <div className={`s-buybar ${barra ? 'on' : ''}`} aria-hidden={!barra}>

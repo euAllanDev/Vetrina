@@ -23,6 +23,7 @@ import { EmpresaPage } from './pages/Empresa';
 import { Usuarios } from './pages/Usuarios';
 import { Conta } from './pages/Conta';
 import { Afiliados } from './pages/Afiliados';
+import { Anuncios } from './pages/Anuncios';
 import { Celular } from './pages/Celular';
 import { receberDoCompartilhar } from './lib/compartilhado';
 import { Store } from './store/Store';
@@ -40,6 +41,7 @@ const PAGES: Record<string, () => ReactNode> = {
   '/financeiro': () => <Financeiro />,
   '/relatorios': () => <Relatorios />,
   '/afiliados': () => <Afiliados />,
+  '/anuncios': () => <Anuncios />,
   '/empresa': () => <EmpresaPage />,
   '/usuarios': () => <Usuarios />,
   '/conta': () => <Conta />,

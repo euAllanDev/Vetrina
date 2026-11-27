@@ -43,6 +43,7 @@ const NAV_AFILIADOS: { group: string; items: NavItem[] }[] = [
   { group: 'Vitrine', items: [
     { path: '/afiliados', label: 'Afiliados e cliques', icon: 'link', roles: ['GERENTE'] },
     { path: '/produtos', label: 'Produtos', icon: 'package', roles: ['GERENTE', 'VENDEDOR', 'ESTOQUISTA', 'FINANCEIRO'] },
+    { path: '/anuncios', label: 'Anúncios', icon: 'tag', roles: ['GERENTE'] },
   ] },
   { group: 'Configurações', items: [
     { path: '/empresa', label: 'Empresa', icon: 'building', roles: [] },
@@ -89,7 +90,7 @@ export function Shell({ path, children }: { path: string; children: ReactNode })
         <div className="brand">
           <div className="brand-mark" aria-hidden="true"><span /></div>
           <div style={{ minWidth: 0 }}>
-            <div className="brand-name">{empresa?.nomeFantasia || 'ERP'}</div>
+            <div className="brand-name">{empresa?.nomeFantasia || 'Vetrina'}</div>
             <div className="brand-sub">{empresa?.razaoSocial ?? 'Gestão'}</div>
           </div>
         </div>

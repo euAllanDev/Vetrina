@@ -23,7 +23,7 @@ export interface ParceiroV { id: number; nome: string; cor: string | null; produ
 export interface Catalogo { loja: Loja; categorias: Categoria[]; produtos: Produto[]; parceiros?: ParceiroV[] }
 
 /** Estado de navegação da loja, espelhado na URL (?c=, ?p=, ?q=, ?l=loja, ?v=ofertas|novidades). */
-export interface Rota { p?: number; c?: number; q?: string; l?: number; s?: string; v?: 'ofertas' | 'novidades' | 'todos' | 'baixou' | 'favoritos' }
+export interface Rota { pag?: 'sobre'; p?: number; c?: number; q?: string; l?: number; s?: string; v?: 'ofertas' | 'novidades' | 'todos' | 'baixou' | 'favoritos' }
 
 export function lerRota(): Rota {
   const s = new URLSearchParams(window.location.search);
@@ -31,6 +31,7 @@ export function lerRota(): Rota {
   // Produto tem link curto e fixo (/loja/p/37), bom para compartilhar e para o Google; ?p=37 continua valendo.
   const m = window.location.pathname.match(/^\/loja\/p\/(\d+)/);
   if (m) r.p = Number(m[1]);
+  if (/^\/loja\/sobre/.test(window.location.pathname)) r.pag = 'sobre';
   // Seleção temática: /loja/s/perfumes-pela-metade
   const sel = window.location.pathname.match(/^\/loja\/s\/([a-z0-9-]+)/);
   if (sel) r.s = sel[1];
@@ -44,6 +45,7 @@ export function lerRota(): Rota {
 }
 
 export function urlDe(r: Rota) {
+  if (r.pag) return `/loja/${r.pag}`;
   if (r.p && !r.c && !r.q && !r.l && !r.v && !r.s) return `/loja/p/${r.p}`;
   if (r.s) return `/loja/s/${r.s}${r.p ? `?p=${r.p}` : ''}`;
   const s = new URLSearchParams();

@@ -53,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/integracoes/sincronizar").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/catalogo/pedidos").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/alertas/chave").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/anuncios", "/api/anuncios/*/imagem", "/api/anuncios/*/ir", "/api/anuncios/ads.txt").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/alertas", "/api/alertas/remover").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

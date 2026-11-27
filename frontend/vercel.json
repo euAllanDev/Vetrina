@@ -8,6 +8,10 @@
   ],
   "rewrites": [
     {
+      "source": "/ads.txt",
+      "destination": "https://vetrina-42b1.onrender.com/api/anuncios/ads.txt"
+    },
+    {
       "source": "/robots.txt",
       "destination": "/api/robots"
     },

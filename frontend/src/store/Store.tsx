@@ -3,6 +3,8 @@ import { SELECOES, naEpoca } from '../../api/_selecoes.js';
 import { Icon } from '../components/icons';
 import { money, onlyDigits } from '../lib/format';
 import { Home } from './Home';
+import { Sobre } from './Sobre';
+import { Anuncio } from './anuncios';
 import { Lista } from './Lista';
 import { Pdp } from './Pdp';
 import {
@@ -146,7 +148,7 @@ export function Store() {
     const cat = dados?.categorias.find((c) => c.id === rota.c);
     const lj = dados?.parceiros?.find((x) => x.id === rota.l);
     const sel = rota.s ? SELECOES.find((x) => x.slug === rota.s) : undefined;
-    document.title = produto ? `${produto.nome} — ${nome}` : sel ? `${sel.titulo} — ${nome}` : rota.v === 'favoritos' ? `Meus favoritos — ${nome}` : lj ? `${lj.nome} — ${nome}` : cat ? `${cat.nome} — ${nome}` : rota.q ? `Busca: ${rota.q} — ${nome}` : nome;
+    document.title = rota.pag === 'sobre' ? `Sobre e privacidade — ${nome}` : produto ? `${produto.nome} — ${nome}` : sel ? `${sel.titulo} — ${nome}` : rota.v === 'favoritos' ? `Meus favoritos — ${nome}` : lj ? `${lj.nome} — ${nome}` : cat ? `${cat.nome} — ${nome}` : rota.q ? `Busca: ${rota.q} — ${nome}` : nome;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#ffffff');
     // Mantém descrição e endereço canônico em dia ao navegar (a primeira carga já vem pronta do servidor).
     if (!dados) return;
@@ -189,6 +191,7 @@ export function Store() {
   };
 
   const view = !dados ? null
+    : rota.pag === 'sobre' ? <Sobre dados={dados} ir={ir} />
     : rota.p ? (produto
       ? <Pdp key={produto.id} p={produto} dados={dados} naSacola={sacola[produto.id] ?? 0} ir={ir} onAbrir={abrir} onAdicionar={adicionar} />
       : <div className="s-vazio"><span className="s-display sm">Produto indisponível</span><p>Este produto não está mais na vitrine.</p><button className="s-btn" onClick={() => ir({})}>Voltar à loja</button></div>)
@@ -208,6 +211,7 @@ export function Store() {
         ) : !dados ? (acordando ? <Acordando nome={'a loja'} /> : <Carregando />) : view}
       </main>
 
+      {dados && !erro && <Anuncio posicao="RODAPE" />}
       {dados && <Rodape dados={dados} ir={ir} />}
 
       {menuAberto && dados && <MenuMobile dados={dados} ir={ir} onFechar={() => setMenuAberto(false)} />}
@@ -751,6 +755,7 @@ function Rodape({ dados, ir }: { dados: Catalogo; ir: (r: Rota) => void }) {
       )}
       <div className="s-foot-bottom">
         <span>© {new Date().getFullYear()} {loja.razaoSocial ?? loja.nome}</span>
+        <a href={urlDe({ pag: 'sobre' })} onClick={(e) => { e.preventDefault(); ir({ pag: 'sobre' }); }}>Sobre, como ganhamos dinheiro e privacidade</a>
       </div>
     </footer>
   );

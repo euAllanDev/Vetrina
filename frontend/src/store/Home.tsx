@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { diasAte, selecoesAtivas } from '../../api/_selecoes.js';
+import { Anuncio } from './anuncios';
 import { Card, Foto, MarcaLoja, Seta, Trilho, baixou, ehAfiliado, emOferta, reduzMovimento, urlDe, useRevela, type Abrir, type Adicionar, type Catalogo, type Produto, type Rota } from './shared';
 
 /** Frases de campanha por categoria (as que não estiverem aqui usam o próprio nome). */
@@ -41,6 +42,8 @@ export function Home({ dados, ir, onAbrir, onAdicionar }: Props) {
     <>
       {slides.length > 0 ? <Hero slides={slides} ir={ir} /> : <HeroSimples nome={dados.loja.nome} ir={ir} />}
 
+      <Anuncio posicao="HOME_TOPO" />
+
       <Letreiro itens={categorias.map((c) => c.nome)} />
 
       <Passos comparador={produtos.some(ehAfiliado)} />
@@ -63,6 +66,8 @@ export function Home({ dados, ir, onAbrir, onAdicionar }: Props) {
       <Categorias dados={dados} capa={(id) => doCat(id)[0]} ir={ir} />
 
       <Selecoes dados={dados} ir={ir} />
+
+      <Anuncio posicao="HOME_MEIO" />
 
       {(dados.parceiros?.length ?? 0) > 0 && <Parceiros dados={dados} ir={ir} />}
 

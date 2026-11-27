@@ -29,7 +29,7 @@ export function Login() {
       <div className="login-form">
         <div className="brand" style={{ padding: 0, marginBottom: 48 }}>
           <div className="brand-mark" aria-hidden="true"><span /></div>
-          <div className="brand-name" style={{ fontSize: 15 }}>ERP</div>
+          <div className="brand-name" style={{ fontSize: 15 }}>Vetrina</div>
         </div>
         <h1>Entrar</h1>
         <p className="muted" style={{ marginTop: 6, marginBottom: 28 }}>Use o e-mail e a senha cadastrados pelo administrador.</p>

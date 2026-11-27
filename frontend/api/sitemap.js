@@ -9,6 +9,7 @@ export default async function handler(req, res) {
   const data = (iso) => (iso ? `<lastmod>${iso.slice(0, 10)}</lastmod>` : '');
   const urls = [
     `<url><loc>${o}/loja</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${o}/loja/sobre</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>`,
     `<url><loc>${o}/loja?v=ofertas</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
     ...selecoesAtivas(d.produtos).map((s) => `<url><loc>${o}/loja/s/${s.slug}</loc><changefreq>daily</changefreq><priority>0.85</priority></url>`),
     ...d.categorias.map((c) => `<url><loc>${o}/loja?c=${c.id}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`),

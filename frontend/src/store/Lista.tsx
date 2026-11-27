@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Anuncio } from './anuncios';
 import { SELECOES, diasAte, produtosDaSelecao, produtosDoGrupo, selecoesAtivas } from '../../api/_selecoes.js';
 import { money } from '../lib/format';
 import { Card, CompartilharLista, Trilho, MarcaLoja, useFavoritos, baixou, ehAfiliado, emOferta, freteGratis, transicao, urlDe, type Abrir, type Adicionar, type Catalogo, type Rota } from './shared';
@@ -222,9 +223,12 @@ export function Lista({ dados, rota, ir, onAbrir, onAdicionar }: Props) {
       ) : (
         <div className="s-grid" aria-live="polite">
           {lista.map((p, i) => (
-            <div key={p.id} style={{ viewTransitionName: `item-${p.id}` }}>
-              <Card p={p} i={i} onAbrir={onAbrir} onAdicionar={onAdicionar} salvoPor={favoritos ? favs[p.id] : undefined} />
-            </div>
+            <Fragment key={p.id}>
+              {i === 8 && !favoritos && <Anuncio posicao="LISTA" className="na-grade" />}
+              <div style={{ viewTransitionName: `item-${p.id}` }}>
+                <Card p={p} i={i} onAbrir={onAbrir} onAdicionar={onAdicionar} salvoPor={favoritos ? favs[p.id] : undefined} />
+              </div>
+            </Fragment>
           ))}
         </div>
       )}
