@@ -812,9 +812,8 @@
 .s-anuncio.rodape { margin-bottom: clamp(40px, 6vw, 72px); }
 .s-anuncio.produto { margin-top: 32px; }
 .s-anuncio.na-grade { grid-column: 1 / -1; margin: 8px 0; }
-.s-anuncio.na-grade img { aspect-ratio: 4 / 1; }
 @media (max-width: 720px) {
-  .s-anuncio img, .s-anuncio.na-grade img { aspect-ratio: 2 / 1; }
+  .s-anuncio { margin-left: 0; margin-right: 0; }
 }
 
 /* ============================== sobre e privacidade ============================== */

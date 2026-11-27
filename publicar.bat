@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 (
-  echo Anuncios: banners proprios com periodo, posicao e cliques, Google AdSense nos espacos sem banner, ads.txt e pagina Sobre e privacidade
+  echo Anuncios: banner inteiro no celular, sem corte nas laterais
   echo.
   echo Co-Authored-By: Claude Opus 5.5 ^<noreply@anthropic.com^>
   echo Claude-Session: https://claude.ai/code/session_01MYCeijgeTPNjoMaE41FQBM

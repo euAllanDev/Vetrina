@@ -123,7 +123,7 @@ function BannerDrawer({ b, onClose, onSaved }: { b: BannerAdmin | null; onClose:
         <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} />
       </label>
       <p className="muted" style={{ fontSize: 12, margin: '6px 0 16px' }}>
-        Tamanho ideal: <strong>1500 × 500</strong> (3 por 1). No celular as laterais são cortadas, então deixe o texto e o produto no centro. JPG, PNG ou WebP.
+        Tamanho ideal: <strong>1500 × 500</strong> (3 por 1). A imagem aparece inteira, no computador e no celular; no celular ela fica menor, então use letras grandes. JPG, PNG ou WebP.
       </p>
       <div className="form-grid">
         <Field label="Nome do anúncio" className="col-12" hint="Aparece só para você e para leitores de tela (ex.: Black Friday Mercado Livre).">
